@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="AutoLoan.Api/AutoLoan.Api.csproj" />
+  <Project Path="AutoLoan.Shared/AutoLoan.Shared.csproj" />
+  <Project Path="AutoLoan.Web/AutoLoan.Web.csproj" />
+</Solution>
