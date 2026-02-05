@@ -49,6 +49,13 @@ public class User
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     
+    // Navigation Properties
+    public ICollection<Application> Applications { get; set; } = new List<Application>();
+    public ICollection<ApplicationNote> ApplicationNotes { get; set; } = new List<ApplicationNote>();
+    public ICollection<StatusHistory> StatusHistories { get; set; } = new List<StatusHistory>();
+    public ICollection<Document> VerifiedDocuments { get; set; } = new List<Document>();
+    public ICollection<ApiKey> ApiKeys { get; set; } = new List<ApiKey>();
+    
     // Computed
     public string FullName => $"{FirstName} {LastName}";
 }
