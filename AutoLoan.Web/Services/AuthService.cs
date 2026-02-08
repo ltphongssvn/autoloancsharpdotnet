@@ -16,7 +16,7 @@ public class AuthService
 
     public async Task<UserDto?> LoginAsync(string email, string password)
     {
-        var response = await _http.PostAsJsonAsync("auth/login", new { user = new { email, password } });
+        var response = await _http.PostAsJsonAsync("auth/login", new { email, password });
         string? token = null;
         if (token == null && response.Headers.Contains("Authorization"))
             token = response.Headers.GetValues("Authorization").FirstOrDefault()?.Replace("Bearer ", "");
@@ -32,7 +32,7 @@ public class AuthService
 
     public async Task<UserDto?> SignupAsync(SignupRequest request)
     {
-        var response = await _http.PostAsJsonAsync("auth/signup", new { user = request });
+        var response = await _http.PostAsJsonAsync("auth/signup", request);
         string? token = null;
         if (token == null && response.Headers.Contains("Authorization"))
             token = response.Headers.GetValues("Authorization").FirstOrDefault()?.Replace("Bearer ", "");

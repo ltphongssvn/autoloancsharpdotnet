@@ -17,7 +17,7 @@ namespace AutoLoan.Web
 
             builder.Services.AddHttpClient("API", client =>
             {
-                client.BaseAddress = new Uri("https://autoloancsharpdotnet-production.up.railway.app/api/v1/");
+                client.BaseAddress = new Uri("https://dotnet-api-production-5bfe.up.railway.app/api/v1/");
             }).AddHttpMessageHandler<AuthHeaderHandler>();
 
             builder.Services.AddScoped(sp =>
