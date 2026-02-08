@@ -1,0 +1,270 @@
+@inject NavigationManager Nav
+@inject AutoLoan.Web.Services.AuthStateService AuthState
+@inject AutoLoan.Web.Services.AuthService AuthService
+
+<PageTitle>Financial Analysis - Auto Loan</PageTitle>
+
+<div class="analysis-page">
+    <div class="analysis-header">
+        <h2>Financial Analysis</h2>
+        <div class="header-right">
+            <span>Welcome, @(AuthState.User?.FirstName ?? "Underwriter")</span>
+            <button class="btn-logout" @onclick="HandleLogout">Logout</button>
+        </div>
+    </div>
+
+    <div class="analysis-content">
+        <button class="btn-back" @onclick="OnBack">← Back to Dashboard</button>
+        <h3>Application @AppId - @Status.Replace("_", " ").ToUpper()</h3>
+
+        <div class="two-col">
+            <div class="col-main">
+                <div class="card">
+                    <h4>RISK ASSESSMENT</h4>
+                    <div class="risk-item">
+                        <div class="risk-row"><span class="risk-label">Debt-to-Income Ratio</span><span>@DtiRatio% @(DtiPass ? "✅" : "❌")</span></div>
+                        <div class="progress-bar"><div class="progress-fill @(DtiPass ? "fill-green" : "fill-red")" style="width:@(Math.Min(DtiRatio,100))%"></div></div>
+                        <span class="risk-target">Target: &lt; 43%</span>
+                    </div>
+                    <div class="risk-item">
+                        <div class="risk-row"><span class="risk-label">Loan-to-Value Ratio</span><span>@LtvRatio% @(LtvPass ? "✅" : "❌")</span></div>
+                        <div class="progress-bar"><div class="progress-fill @(LtvPass ? "fill-green" : "fill-red")" style="width:@(Math.Min(LtvRatio,100))%"></div></div>
+                        <span class="risk-target">Target: &lt; 90%</span>
+                    </div>
+                    <div class="risk-item">
+                        <div class="risk-row"><span class="risk-label">Employment Stability</span><span>@EmpYears years @(EmpPass ? "✅" : "❌")</span></div>
+                        <span class="risk-target">Target: &gt; 2 years</span>
+                    </div>
+                    <div class="risk-item">
+                        <div class="risk-row"><span class="risk-label">Income Verification</span><span>$@AnnualIncome.ToString("N0")/yr @(IncomePass ? "✅" : "❌")</span></div>
+                        <span class="risk-target">Verified</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h4>APPLICANT SUMMARY</h4>
+                    <div class="summary-2col">
+                        <div>
+                            <p><strong>Name:</strong> @pFirstName @pLastName</p>
+                            <p><strong>Age:</strong> @Age</p>
+                            <p><strong>Income:</strong> $@AnnualIncome.ToString("N0")/yr</p>
+                        </div>
+                        <div>
+                            <p><strong>Vehicle:</strong> @cYear @cMake @cModel</p>
+                            <p><strong>Value:</strong> $@VehiclePrice.ToString("N0")</p>
+                            <p><strong>Down:</strong> $@DownPmt.ToString("N0")</p>
+                        </div>
+                    </div>
+                </div>
+
+                @if (officerNotes.Count > 0)
+                {
+                    <div class="card">
+                        <h4>OFFICER NOTES</h4>
+                        @foreach (var n in officerNotes)
+                        {
+                            <div class="note-item"><em>@n.Date</em> - @n.Text</div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <div class="col-side">
+                <div class="card card-blue">
+                    <h4>LOAN CALCULATION</h4>
+                    <div class="calc-row"><span>Principal:</span><strong>$@Principal.ToString("N0")</strong></div>
+                    <div class="calc-row"><span>Interest Rate:</span><strong>@IntRate% APR</strong></div>
+                    <div class="calc-row"><span>Term:</span><strong>@TermMonths months</strong></div>
+                    <div class="calc-row"><span>Monthly Payment:</span><strong>$@MonthlyPmt.ToString("F2")</strong></div>
+                    <div class="calc-row"><span>Total Interest:</span><strong>$@TotalInterest.ToString("F2")</strong></div>
+                    <div class="calc-row"><span>Total Repayment:</span><strong>$@TotalRepayment.ToString("F2")</strong></div>
+                </div>
+
+                <div class="card card-yellow">
+                    <h4>UNDERWRITER DECISION</h4>
+                    <textarea rows="3" placeholder="Decision Notes..." @bind="decisionNotes"></textarea>
+                    <div class="decision-btns">
+                        <button class="btn-outline-sm" @onclick="() => showDocsModal = true">Docs</button>
+                        <button class="btn-danger" @onclick="() => showRejectModal = true">Reject</button>
+                        <button class="btn-success" @onclick="() => showApproveModal = true">Approve</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (showApproveModal)
+    {
+        <div class="modal-overlay" @onclick="() => showApproveModal = false">
+            <div class="modal" @onclick:stopPropagation="true">
+                <h3>Approve Application</h3>
+                <p><strong>Application:</strong> @AppId</p>
+                <p><strong>Applicant:</strong> @pFirstName @pLastName</p>
+                <p><strong>Loan:</strong> $@Principal.ToString("N0")</p>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>Term</label>
+                        <select @bind="loanTerm">
+                            <option value="36">36 months</option>
+                            <option value="48">48 months</option>
+                            <option value="60">60 months</option>
+                            <option value="72">72 months</option>
+                        </select>
+                    </div>
+                    <div class="form-group half">
+                        <label>APR %</label>
+                        <input type="number" step="0.1" @bind="interestRate" />
+                    </div>
+                </div>
+                <div class="form-group"><label>Conditions</label><input @bind="approvalConditions" /></div>
+                <div class="modal-actions">
+                    <button class="btn-outline-sm" @onclick="() => showApproveModal = false">Cancel</button>
+                    <button class="btn-success" @onclick="HandleApprove">Confirm Approval</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showRejectModal)
+    {
+        <div class="modal-overlay" @onclick="() => showRejectModal = false">
+            <div class="modal" @onclick:stopPropagation="true">
+                <h3>Reject Application</h3>
+                <p><strong>Application:</strong> @AppId</p>
+                <p><strong>Applicant:</strong> @pFirstName @pLastName</p>
+                <label style="font-weight:600;margin-top:1rem;display:block">Rejection Reason:</label>
+                @foreach (var r in rejectionReasons)
+                {
+                    var reason = r;
+                    <label class="radio-label"><input type="radio" name="reject" value="@reason" checked="@(rejectReason == reason)" @onchange="() => rejectReason = reason" /> @reason</label>
+                }
+                <div class="form-group" style="margin-top:1rem"><label>Additional Explanation</label><textarea rows="3" @bind="additionalExplanation"></textarea></div>
+                <div class="modal-actions">
+                    <button class="btn-outline-sm" @onclick="() => showRejectModal = false">Cancel</button>
+                    <button class="btn-danger" @onclick="HandleReject">Confirm Rejection</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showDocsModal)
+    {
+        <div class="modal-overlay" @onclick="() => showDocsModal = false">
+            <div class="modal" @onclick:stopPropagation="true">
+                <h3>Request Documents</h3>
+                <p><strong>Application:</strong> @AppId</p>
+                <label style="font-weight:600;margin-top:0.5rem;display:block">Select Documents:</label>
+                @foreach (var dt in documentTypes)
+                {
+                    var docItem = dt;
+                    <label class="check-item"><input type="checkbox" checked="@selectedDocs.Contains(docItem.Id)" @onchange="() => ToggleDoc(docItem.Id)" /> @docItem.Label</label>
+                }
+                <div class="form-group" style="margin-top:1rem"><label>Notes for Applicant</label><textarea rows="2" @bind="docsNotes" placeholder="Please provide the requested documents..."></textarea></div>
+                <div class="modal-actions">
+                    <button class="btn-outline-sm" @onclick="() => showDocsModal = false">Cancel</button>
+                    <button class="btn-primary" disabled="@(selectedDocs.Count == 0)" @onclick="HandleRequestDocs">Request Documents</button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .analysis-page { min-height: 100vh; background: #f5f5f5; }
+    .analysis-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .analysis-header h2 { margin: 0; font-weight: 700; }
+    .header-right { display: flex; align-items: center; gap: 1rem; }
+    .btn-logout { background: white; border: 1px solid #dc2626; color: #dc2626; padding: 0.4rem 1rem; border-radius: 4px; cursor: pointer; }
+    .analysis-content { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem; }
+    .btn-back { background: none; border: none; color: #667eea; cursor: pointer; font-size: 1rem; margin-bottom: 1rem; display: block; }
+    .two-col { display: flex; gap: 1.5rem; }
+    .col-main { flex: 2; min-width: 0; }
+    .col-side { flex: 1; min-width: 280px; }
+    .card { background: white; border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem; }
+    .card h4 { margin: 0 0 1rem; font-weight: 700; font-size: 0.9rem; letter-spacing: 0.5px; }
+    .card-blue { background: #e0f2fe; }
+    .card-yellow { background: #fef3c7; }
+    .risk-item { margin-bottom: 1rem; }
+    .risk-row { display: flex; justify-content: space-between; margin-bottom: 0.25rem; }
+    .risk-label { font-weight: 600; font-size: 0.9rem; }
+    .risk-target { font-size: 0.75rem; color: #666; }
+    .progress-bar { height: 8px; background: #e5e7eb; border-radius: 4px; overflow: hidden; margin-bottom: 0.25rem; }
+    .progress-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+    .fill-green { background: #10b981; }
+    .fill-red { background: #ef4444; }
+    .summary-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .summary-2col p { margin: 0.25rem 0; font-size: 0.9rem; }
+    .calc-row { display: flex; justify-content: space-between; padding: 0.3rem 0; font-size: 0.9rem; }
+    .note-item { background: #f9fafb; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; font-size: 0.9rem; }
+    textarea { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; margin-bottom: 0.5rem; resize: vertical; background: white; }
+    select, input[type="number"], input:not([type]) { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; }
+    .decision-btns { display: flex; gap: 0.5rem; }
+    .decision-btns button { flex: 1; }
+    .btn-outline-sm { background: white; border: 1px solid #ccc; padding: 0.4rem 0.75rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    .btn-danger { background: #dc2626; color: white; border: none; padding: 0.4rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    .btn-success { background: #10b981; color: white; border: none; padding: 0.4rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    .btn-primary { background: #667eea; color: white; border: none; padding: 0.4rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal { background: white; border-radius: 8px; padding: 2rem; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+    .modal h3 { margin: 0 0 1rem; }
+    .modal p { margin: 0.25rem 0; font-size: 0.9rem; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
+    .form-row { display: flex; gap: 1rem; }
+    .form-group { margin-bottom: 0.75rem; flex: 1; }
+    .form-group.half { flex: 1; }
+    .form-group label { display: block; margin-bottom: 0.25rem; font-weight: 500; font-size: 0.9rem; }
+    .radio-label { display: block; padding: 0.25rem 0; cursor: pointer; font-size: 0.9rem; }
+    .check-item { display: block; padding: 0.2rem 0; cursor: pointer; font-size: 0.9rem; }
+    @@media (max-width: 900px) { .two-col { flex-direction: column; } .col-side { min-width: unset; } }
+</style>
+
+@code {
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    private string Status = "under_review", AppId = "#APP-0001";
+    private string pFirstName = "", pLastName = "", pDob = "";
+    private string cMake = "", cModel = "", cYear = "";
+    private double VehiclePrice = 0, LoanAmt = 0, DownPmt = 0, AnnualIncome = 0;
+    private int EmpYears = 0;
+    private string loanTerm = "48", interestRate = "6.9";
+    private string approvalConditions = "Standard terms apply";
+    private string decisionNotes = "", rejectReason = "", additionalExplanation = "";
+    private string docsNotes = "";
+    private bool showApproveModal, showRejectModal, showDocsModal;
+    private List<string> selectedDocs = new();
+    private List<(string Text, string Date)> officerNotes = new();
+
+    private double Principal => LoanAmt - DownPmt;
+    private int TermMonths => int.TryParse(loanTerm, out var t) ? t : 48;
+    private double IntRate => double.TryParse(interestRate, out var r) ? r : 6.9;
+    private double MonthlyPmt { get { var r = IntRate / 100 / 12; return Principal > 0 && r > 0 ? (Principal * r * Math.Pow(1+r, TermMonths)) / (Math.Pow(1+r, TermMonths) - 1) : 0; } }
+    private double TotalRepayment => MonthlyPmt * TermMonths;
+    private double TotalInterest => TotalRepayment - Principal;
+    private int DtiRatio => AnnualIncome > 0 ? (int)Math.Round(MonthlyPmt * 12 / AnnualIncome * 100) : 0;
+    private int LtvRatio => VehiclePrice > 0 ? (int)Math.Round(Principal / VehiclePrice * 100) : 0;
+    private bool DtiPass => DtiRatio < 43;
+    private bool LtvPass => LtvRatio < 90;
+    private bool EmpPass => EmpYears >= 2;
+    private bool IncomePass => AnnualIncome > 0;
+    private string Age => string.IsNullOrEmpty(pDob) ? "—" : ((int)((DateTime.Now - DateTime.Parse(pDob)).TotalDays / 365.25)).ToString();
+
+    private string[] rejectionReasons = { "Debt-to-income ratio too high", "Insufficient income", "Loan-to-value ratio too high", "Employment history insufficient", "Unable to verify information", "Other" };
+    private (string Id, string Label)[] documentTypes = {
+        ("proof_of_income", "Proof of Income (Pay Stubs)"),
+        ("bank_statements", "Bank Statements (Last 3 months)"),
+        ("tax_returns", "Tax Returns (Last 2 years)"),
+        ("employment_verification", "Employment Verification Letter"),
+        ("id_verification", "Government ID"),
+        ("proof_of_residence", "Proof of Residence"),
+        ("vehicle_info", "Vehicle Purchase Agreement"),
+        ("insurance", "Proof of Insurance")
+    };
+
+    private void ToggleDoc(string id) { if (selectedDocs.Contains(id)) selectedDocs.Remove(id); else selectedDocs.Add(id); }
+
+    private async Task HandleApprove() { showApproveModal = false; await OnBack.InvokeAsync(); }
+    private async Task HandleReject() { if (string.IsNullOrWhiteSpace(rejectReason)) return; showRejectModal = false; await OnBack.InvokeAsync(); }
+    private async Task HandleRequestDocs() { showDocsModal = false; selectedDocs.Clear(); docsNotes = ""; await Task.CompletedTask; }
+    private async Task HandleLogout() { await AuthService.LogoutAsync(); Nav.NavigateTo("/"); }
+}

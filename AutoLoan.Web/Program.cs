@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using AutoLoan.Web.Services;
 
 namespace AutoLoan.Web
 {
@@ -11,7 +12,18 @@ namespace AutoLoan.Web
             builder.RootComponents.Add<App>("#app");
             builder.RootComponents.Add<HeadOutlet>("head::after");
 
-            builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+            builder.Services.AddSingleton<AuthStateService>();
+            builder.Services.AddTransient<AuthHeaderHandler>();
+
+            builder.Services.AddHttpClient("API", client =>
+            {
+                client.BaseAddress = new Uri("https://autoloancsharpdotnet-production.up.railway.app/api/v1/");
+            }).AddHttpMessageHandler<AuthHeaderHandler>();
+
+            builder.Services.AddScoped(sp =>
+                sp.GetRequiredService<IHttpClientFactory>().CreateClient("API"));
+
+            builder.Services.AddScoped<AuthService>();
 
             await builder.Build().RunAsync();
         }

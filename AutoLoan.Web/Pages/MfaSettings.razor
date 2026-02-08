@@ -1,0 +1,111 @@
+<div class="mfa-settings">
+    <h3>Two-Factor Authentication</h3>
+
+    @if (!string.IsNullOrEmpty(error))
+    {
+        <div class="alert-error">@error</div>
+    }
+    @if (!string.IsNullOrEmpty(success))
+    {
+        <div class="alert-success">@success</div>
+    }
+
+    @if (backupCodes.Count > 0)
+    {
+        <div class="backup-box">
+            <p><strong>Save your backup codes:</strong></p>
+            <div class="codes-grid">
+                @foreach (var bc in backupCodes) { <span class="code">@bc</span> }
+            </div>
+            <p class="text-muted">Store these codes safely. Each can only be used once.</p>
+        </div>
+    }
+
+    @if (!statusLoaded)
+    {
+        <button class="btn-blue" disabled="@loading" @onclick="FetchStatus">@(loading ? "Loading..." : "Check MFA Status")</button>
+    }
+    else if (!mfaEnabled && !showSetup)
+    {
+        <p>MFA is not enabled. Enable it for extra security.</p>
+        <button class="btn-green" disabled="@loading" @onclick="SetupMfa">@(loading ? "Setting up..." : "Enable MFA")</button>
+    }
+    else if (showSetup)
+    {
+        <p>Scan this QR code with your authenticator app:</p>
+        <div class="qr-placeholder">[QR Code]</div>
+        <div class="verify-row">
+            <input type="text" maxlength="6" placeholder="Enter 6-digit code" @bind="verifyCode" />
+            <button class="btn-blue" disabled="@(loading || verifyCode.Length != 6)" @onclick="EnableMfa">@(loading ? "Verifying..." : "Verify & Enable")</button>
+        </div>
+    }
+    else if (mfaEnabled)
+    {
+        <p class="text-green">✓ MFA is enabled</p>
+        <div class="verify-row">
+            <input type="text" maxlength="6" placeholder="Enter 6-digit code to disable" @bind="verifyCode" />
+            <button class="btn-red" disabled="@(loading || verifyCode.Length != 6)" @onclick="DisableMfa">@(loading ? "Disabling..." : "Disable MFA")</button>
+        </div>
+    }
+</div>
+
+<style>
+    .mfa-settings { padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .mfa-settings h3 { margin: 0 0 1rem; font-size: 1.1rem; font-weight: 600; }
+    .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; }
+    .alert-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; }
+    .backup-box { background: #fefce8; border: 1px solid #fde68a; padding: 1rem; border-radius: 4px; margin-bottom: 1rem; }
+    .codes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.25rem; font-family: monospace; font-size: 0.85rem; margin: 0.5rem 0; }
+    .text-muted { color: #666; font-size: 0.8rem; }
+    .text-green { color: #16a34a; font-weight: 600; }
+    .qr-placeholder { width: 200px; height: 200px; background: #f3f4f6; border: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: center; margin: 1rem 0; color: #999; }
+    .verify-row { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+    .verify-row input { padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; width: 180px; }
+    .btn-blue { background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    .btn-green { background: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    .btn-red { background: #dc2626; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    .btn-blue:disabled, .btn-green:disabled, .btn-red:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
+
+@code {
+    private bool statusLoaded, mfaEnabled, showSetup, loading;
+    private string verifyCode = "", error = "", success = "";
+    private List<string> backupCodes = new();
+
+    private async Task FetchStatus()
+    {
+        loading = true; error = "";
+        await Task.Delay(300);
+        statusLoaded = true; mfaEnabled = false;
+        loading = false;
+    }
+
+    private async Task SetupMfa()
+    {
+        loading = true; error = "";
+        await Task.Delay(300);
+        showSetup = true;
+        loading = false;
+    }
+
+    private async Task EnableMfa()
+    {
+        loading = true; error = "";
+        await Task.Delay(300);
+        mfaEnabled = true; showSetup = false;
+        success = "MFA enabled successfully!";
+        backupCodes = new List<string> { "ABCD-1234", "EFGH-5678", "IJKL-9012", "MNOP-3456" };
+        verifyCode = "";
+        loading = false;
+    }
+
+    private async Task DisableMfa()
+    {
+        loading = true; error = "";
+        await Task.Delay(300);
+        mfaEnabled = false; statusLoaded = true;
+        success = "MFA disabled successfully";
+        verifyCode = "";
+        loading = false;
+    }
+}

@@ -1,5 +1,7 @@
 @page "/login"
 @inject NavigationManager Nav
+@inject AutoLoan.Web.Services.AuthService AuthService
+@inject AutoLoan.Web.Services.AuthStateService AuthState
 
 <PageTitle>Login - Auto Loan</PageTitle>
 
@@ -39,100 +41,41 @@
 
 <style>
     .auth-page {
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        min-height: 100vh; display: flex; align-items: center; justify-content: center;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     }
     .auth-card {
-        background: white;
-        width: 100%;
-        max-width: 400px;
-        margin: 1rem;
-        border-radius: 8px;
-        padding: 2rem;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        background: white; width: 100%; max-width: 400px; margin: 1rem;
+        border-radius: 8px; padding: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     }
-    .auth-brand {
-        color: #667eea;
-        font-weight: 700;
-        margin-bottom: 0.25rem;
-    }
-    .auth-title {
-        color: #333;
-        margin-bottom: 1.5rem;
-        font-weight: 500;
-    }
+    .auth-brand { color: #667eea; font-weight: 700; margin-bottom: 0.25rem; }
+    .auth-title { color: #333; margin-bottom: 1.5rem; font-weight: 500; }
     .alert-error {
-        background: #fef2f2;
-        color: #dc2626;
-        border: 1px solid #fecaca;
-        padding: 0.75rem;
-        border-radius: 4px;
-        margin-bottom: 1rem;
-        font-size: 0.9rem;
+        background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;
+        padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem;
     }
-    .form-group {
-        margin-bottom: 1rem;
-    }
-    .form-group label {
-        display: block;
-        margin-bottom: 0.25rem;
-        font-weight: 500;
-        font-size: 0.9rem;
-    }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; margin-bottom: 0.25rem; font-weight: 500; font-size: 0.9rem; }
     .form-group input {
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-size: 1rem;
-        box-sizing: border-box;
+        width: 100%; padding: 0.75rem; border: 1px solid #ccc;
+        border-radius: 4px; font-size: 1rem; box-sizing: border-box;
     }
-    .form-group input:focus {
-        outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 2px rgba(102,126,234,0.2);
-    }
-    .forgot-link {
-        text-align: right;
-        margin-bottom: 1rem;
-    }
-    .forgot-link a {
-        color: #667eea;
-        font-size: 0.85rem;
-        text-decoration: none;
-    }
+    .form-group input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 2px rgba(102,126,234,0.2); }
+    .forgot-link { text-align: right; margin-bottom: 1rem; }
+    .forgot-link a { color: #667eea; font-size: 0.85rem; text-decoration: none; }
     .btn-primary {
-        width: 100%;
-        background: #667eea;
-        color: white;
-        border: none;
-        padding: 0.75rem;
-        font-size: 1rem;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: 600;
+        width: 100%; background: #667eea; color: white; border: none;
+        padding: 0.75rem; font-size: 1rem; border-radius: 4px; cursor: pointer; font-weight: 600;
     }
     .btn-primary:hover { background: #5a6fd6; }
     .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-    .auth-footer {
-        text-align: center;
-        margin-top: 1.5rem;
-        font-size: 0.9rem;
-    }
-    .auth-footer a {
-        color: #667eea;
-        text-decoration: none;
-    }
+    .auth-footer { text-align: center; margin-top: 1.5rem; font-size: 0.9rem; }
+    .auth-footer a { color: #667eea; text-decoration: none; }
     .auth-footer p { margin-bottom: 0.5rem; }
 </style>
 
 @code {
-    private string email = "";
-    private string password = "";
-    private string error = "";
+    private string email = "", password = "", error = "";
     private bool isLoading = false;
 
     private async Task HandleSubmit()
@@ -141,9 +84,17 @@
         isLoading = true;
         try
         {
-            // TODO: Call auth API
-            await Task.Delay(500);
-            Nav.NavigateTo("/dashboard");
+            var user = await AuthService.LoginAsync(email, password);
+            if (user != null)
+            {
+                var route = user.Role switch
+                {
+                    "loan_officer" => "/officer-dashboard",
+                    "underwriter" => "/underwriter-dashboard",
+                    _ => "/dashboard"
+                };
+                Nav.NavigateTo(route);
+            }
         }
         catch (Exception ex)
         {

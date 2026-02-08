@@ -1,0 +1,138 @@
+@inject NavigationManager Nav
+
+<PageTitle>Sign Documents - Auto Loan</PageTitle>
+
+<div class="agreement-page">
+    <div class="agreement-header">
+        <button class="btn-back" @onclick="OnBack">← Back</button>
+        <h2>Sign Documents</h2>
+    </div>
+
+    <div class="agreement-content">
+        @if (!signed)
+        {
+            <div class="alert-success-block">
+                <strong style="font-size:1.1rem">Congratulations!</strong>
+                <p>Your loan application has been approved. Please review and sign below.</p>
+            </div>
+
+            <div class="card">
+                <h4>Loan Agreement</h4>
+                <div class="agreement-doc">
+                    <h5 style="text-align:center">AUTO LOAN AGREEMENT</h5>
+                    <hr />
+                    <p><strong>Borrower:</strong> @pFirstName @pLastName</p>
+                    <p><strong>Loan Amount:</strong> $@Financed.ToString("N0")</p>
+                    <p><strong>Interest Rate:</strong> @Rate% APR</p>
+                    <p><strong>Term:</strong> @Term months</p>
+                    <p><strong>Monthly Payment:</strong> $@Monthly.ToString("F2")</p>
+                    <p><strong>First Payment Due:</strong> @FirstPaymentDate</p>
+                    <hr />
+                    <p><strong>Vehicle:</strong> @cYear @cMake @cModel</p>
+                    <p><strong>VIN:</strong> @(string.IsNullOrEmpty(cVin) ? "N/A" : cVin)</p>
+                </div>
+                <a href="#" class="download-link" @onclick="DownloadPdf" @onclick:preventDefault>📥 Download PDF</a>
+            </div>
+
+            <div class="card">
+                <h4>✍ Sign Below</h4>
+                <div class="signature-box">
+                    <div class="signature-placeholder">
+                        @if (string.IsNullOrEmpty(signatureText))
+                        {
+                            <span class="text-muted">Type your full name as signature</span>
+                        }
+                        else
+                        {
+                            <span class="signature-display">@signatureText</span>
+                        }
+                    </div>
+                    <input placeholder="Type your full name" @bind="signatureText" @bind:event="oninput" />
+                    <button class="btn-sm-clear" @onclick='() => signatureText = ""'>Clear</button>
+                </div>
+
+                <div class="checkboxes">
+                    <label class="check-item"><input type="checkbox" @bind="agreedTerms" /> I have read and agree to the loan terms</label>
+                    <label class="check-item"><input type="checkbox" @bind="authorizeSignature" /> I authorize electronic signature</label>
+                </div>
+
+                <button class="btn-success-lg" disabled="@(!CanSign)" @onclick="HandleSign">
+                    @(signing ? "Signing..." : "Sign & Submit")
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="card signed-card">
+                <div class="signed-icon">✅</div>
+                <h3>Agreement Signed &amp; Submitted</h3>
+                <p class="text-muted">Documents will be sent to your email.</p>
+                <div class="signed-actions">
+                    <button class="btn-outline" @onclick="DownloadPdf">📥 Download PDF</button>
+                    <button class="btn-primary" @onclick="OnBack">Back to Dashboard</button>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .agreement-page { min-height: 100vh; background: #f5f5f5; }
+    .agreement-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+    .agreement-header h2 { margin: 0; font-weight: 700; }
+    .btn-back { background: none; border: none; color: #667eea; cursor: pointer; font-size: 1rem; }
+    .agreement-content { max-width: 700px; margin: 0 auto; padding: 2rem 1rem; }
+    .alert-success-block { background: #dcfce7; border: 1px solid #bbf7d0; padding: 1rem 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; }
+    .alert-success-block p { margin: 0.5rem 0 0; }
+    .card { background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+    .card h4 { margin: 0 0 1rem; font-weight: 600; }
+    .agreement-doc { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 1.5rem; max-height: 300px; overflow-y: auto; margin-bottom: 1rem; }
+    .agreement-doc p { margin: 0.4rem 0; font-size: 0.9rem; }
+    .download-link { color: #667eea; text-decoration: none; font-size: 0.9rem; }
+    .signature-box { margin-bottom: 1.5rem; }
+    .signature-placeholder { border: 1px solid #e5e7eb; border-radius: 4px; padding: 1.5rem; min-height: 60px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem; background: white; }
+    .signature-display { font-family: 'Brush Script MT', cursive, serif; font-size: 2rem; color: #1e3a5f; }
+    .signature-box input { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box; margin-bottom: 0.5rem; }
+    .btn-sm-clear { background: none; border: none; color: #667eea; cursor: pointer; font-size: 0.85rem; }
+    .text-muted { color: #999; }
+    .checkboxes { margin-bottom: 1.5rem; }
+    .check-item { display: block; padding: 0.3rem 0; cursor: pointer; }
+    .btn-success-lg { width: 100%; background: #10b981; color: white; border: none; padding: 0.75rem; font-size: 1.1rem; font-weight: 600; border-radius: 4px; cursor: pointer; }
+    .btn-success-lg:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-success-lg:hover:not(:disabled) { background: #059669; }
+    .signed-card { text-align: center; padding: 3rem 1.5rem; }
+    .signed-icon { font-size: 4rem; margin-bottom: 1rem; }
+    .signed-card h3 { margin-bottom: 0.5rem; }
+    .signed-actions { display: flex; gap: 1rem; justify-content: center; margin-top: 1.5rem; }
+    .btn-outline { background: white; border: 1px solid #ccc; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    .btn-primary { background: #667eea; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+</style>
+
+@code {
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    private bool agreedTerms, authorizeSignature, signed, signing;
+    private string signatureText = "";
+
+    private string pFirstName = "", pLastName = "";
+    private string cMake = "", cModel = "", cYear = "", cVin = "";
+    private double LoanAmt = 0, DownPmt = 0, Rate = 6.9, Monthly = 0;
+    private int Term = 48;
+    private double Financed => LoanAmt - DownPmt;
+    private string FirstPaymentDate => new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).AddMonths(1).ToShortDateString();
+    private bool CanSign => agreedTerms && authorizeSignature && !string.IsNullOrWhiteSpace(signatureText) && !signing;
+
+    private async Task HandleSign()
+    {
+        if (!CanSign) return;
+        signing = true;
+        await Task.Delay(500);
+        signed = true;
+        signing = false;
+    }
+
+    private void DownloadPdf()
+    {
+        // TODO: Wire to API
+    }
+}

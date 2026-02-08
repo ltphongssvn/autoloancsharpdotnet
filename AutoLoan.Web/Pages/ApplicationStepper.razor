@@ -1,0 +1,305 @@
+@inject NavigationManager Nav
+@inject AutoLoan.Web.Services.AuthStateService AuthState
+
+<PageTitle>New Application - Auto Loan</PageTitle>
+
+<div class="stepper-page">
+    <div class="stepper-header">
+        <button class="btn-back" @onclick="OnBack">← Back</button>
+        <h2>New Application</h2>
+    </div>
+
+    <div class="stepper-content">
+        <div class="steps-bar">
+            @for (int i = 0; i < stepLabels.Length; i++)
+            {
+                var idx = i;
+                <div class="step-item @(step > idx + 1 ? "step-done" : step == idx + 1 ? "step-active" : "")">
+                    <div class="step-circle">@(idx + 1)</div>
+                    <span class="step-label">@stepLabels[idx]</span>
+                </div>
+            }
+        </div>
+
+        <div class="form-card">
+            @if (step == 1)
+            {
+                <h3>Personal Information</h3>
+                <div class="form-row">
+                    <div class="form-group half"><label>First Name</label><input @bind="pFirstName" /></div>
+                    <div class="form-group half"><label>Last Name</label><input @bind="pLastName" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half"><label>Date of Birth</label><input type="date" value="@pDob" @onchange="@(e => pDob = e.Value?.ToString() ?? "")" /></div>
+                    <div class="form-group half"><label>SSN</label><input type="password" @bind="pSsn" placeholder="XXX-XX-XXXX" /></div>
+                </div>
+                <div class="form-group"><label>Street Address</label><input @bind="pAddress" /></div>
+                <div class="form-row">
+                    <div class="form-group" style="flex:2"><label>City</label><input @bind="pCity" /></div>
+                    <div class="form-group" style="flex:1">
+                        <label>State</label>
+                        <select @bind="pState">
+                            <option value="">Select</option>
+                            @foreach (var s in usStates) { <option value="@s">@s</option> }
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1"><label>ZIP</label><input @bind="pZip" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half"><label>Years at Address</label><input type="number" @bind="pYearsAddr" /></div>
+                    <div class="form-group half"><label>Months</label><input type="number" @bind="pMonthsAddr" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half"><label>Phone</label><input @bind="pPhone" /></div>
+                    <div class="form-group half"><label>Email</label><input type="email" @bind="pEmail" /></div>
+                </div>
+            }
+            else if (step == 2)
+            {
+                <h3>Vehicle Information</h3>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>Make</label>
+                        <select @bind="cMake">
+                            <option value="">Select</option>
+                            @foreach (var m in vehicleMakes) { <option value="@m">@m</option> }
+                        </select>
+                    </div>
+                    <div class="form-group half">
+                        <label>Model</label>
+                        <select @bind="cModel">
+                            <option value="">Select</option>
+                            @foreach (var m in new[]{"Camry","Corolla","Accord","Civic","F-150","Model 3"}) { <option value="@m">@m</option> }
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half"><label>Trim Level</label><input @bind="cTrim" placeholder="e.g., SE, XLE" /></div>
+                    <div class="form-group half">
+                        <label>Year</label>
+                        <select @bind="cYear">
+                            <option value="">Select</option>
+                            @for (int y = 2025; y >= 2016; y--) { var yr = y; <option value="@yr">@yr</option> }
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group"><label>VIN</label><input @bind="cVin" placeholder="17-character VIN" /></div>
+                <div class="form-row">
+                    <div class="form-group half"><label>Mileage</label><input type="number" @bind="cMileage" /></div>
+                    <div class="form-group half"><label>Vehicle Value ($)</label><input type="number" @bind="cPrice" /></div>
+                </div>
+                <div class="form-group">
+                    <label>Condition</label>
+                    <div class="radio-row">
+                        <label class="radio-label"><input type="radio" name="condition" value="new" checked="@(cCondition == "new")" @onchange="@(() => cCondition = "new")" /> New</label>
+                        <label class="radio-label"><input type="radio" name="condition" value="used_certified" checked="@(cCondition == "used_certified")" @onchange="@(() => cCondition = "used_certified")" /> Certified Used</label>
+                        <label class="radio-label"><input type="radio" name="condition" value="used" checked="@(cCondition == "used")" @onchange="@(() => cCondition = "used")" /> Used</label>
+                    </div>
+                </div>
+            }
+            else if (step == 3)
+            {
+                <h3>Loan Details</h3>
+                <div class="form-row">
+                    <div class="form-group half"><label>Loan Amount ($)</label><input type="number" @bind="lAmount" /></div>
+                    <div class="form-group half"><label>Down Payment ($)</label><input type="number" @bind="lDownPayment" /></div>
+                </div>
+                <div class="summary-box">
+                    <h4>Loan Summary</h4>
+                    <div class="summary-row"><span>Vehicle Value:</span><span>$@VehicleValue.ToString("N0")</span></div>
+                    <div class="summary-row"><span>Down Payment:</span><span>$@DownPayment.ToString("N0")</span></div>
+                    <hr />
+                    <div class="summary-row"><span>Loan Amount:</span><strong>$@Principal.ToString("N0")</strong></div>
+                    <div class="summary-row"><span>Loan-to-Value:</span><span class="@(Ltv > 100 ? "text-danger" : "text-success")">@Ltv%</span></div>
+                </div>
+            }
+            else if (step == 4)
+            {
+                <h3>Employment &amp; Financial Info</h3>
+                <div class="form-row">
+                    <div class="form-group half"><label>Employer</label><input @bind="eEmployer" /></div>
+                    <div class="form-group half"><label>Job Title</label><input @bind="eJobTitle" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>Employment Status</label>
+                        <select @bind="eStatus">
+                            <option value="">Select</option>
+                            <option value="full_time">Full-Time</option>
+                            <option value="part_time">Part-Time</option>
+                            <option value="self_employed">Self-Employed</option>
+                            <option value="retired">Retired</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex:1"><label>Years at Job</label><input type="number" @bind="eYears" /></div>
+                    <div class="form-group" style="flex:1"><label>Months</label><input type="number" @bind="eMonths" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half"><label>Annual Income ($)</label><input type="number" @bind="eIncome" /></div>
+                    <div class="form-group half"><label>Monthly Expenses ($)</label><input type="number" @bind="eExpenses" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group half"><label>Other Income ($)</label><input type="number" @bind="eOtherIncome" /></div>
+                    <div class="form-group half"><label>Credit Score</label><input type="number" @bind="eCreditScore" placeholder="300-850" /></div>
+                </div>
+                <div class="alert-@(Dti < 43 ? "success" : "warning")">Debt-to-Income Ratio: @Dti% @(Dti < 43 ? "(Good)" : "(High)")</div>
+            }
+            else if (step == 5)
+            {
+                <h3>Select Terms &amp; Review</h3>
+                <div class="term-cards">
+                    @foreach (var t in loanTerms)
+                    {
+                        var termItem = t;
+                        var payment = CalculatePayment(termItem.Months, termItem.Apr);
+                        <div class="term-card @(selectedTerm == termItem.Months ? "term-selected" : "")" @onclick="() => selectedTerm = termItem.Months">
+                            <span class="term-months">@termItem.Months months</span>
+                            <span class="term-payment">$@payment.ToString("F0")</span>
+                            <span class="term-apr">@termItem.Apr% APR</span>
+                        </div>
+                    }
+                </div>
+                <div class="summary-box">
+                    <h4>Application Summary</h4>
+                    <div class="summary-row"><span><strong>Personal:</strong> @pFirstName @pLastName</span><button class="btn-edit" @onclick="() => step = 1">Edit</button></div>
+                    <hr />
+                    <div class="summary-row"><span><strong>Vehicle:</strong> @cYear @cMake @cModel</span><button class="btn-edit" @onclick="() => step = 2">Edit</button></div>
+                    <hr />
+                    <div class="summary-row"><span><strong>Loan:</strong> $@Principal.ToString("N0") @@ @SelectedTermData.Apr% for @selectedTerm mo</span><button class="btn-edit" @onclick="() => step = 3">Edit</button></div>
+                    <div class="payment-highlight">$@MonthlyPayment.ToString("F2")/month</div>
+                </div>
+                <div class="docs-section">
+                    <h4>Required Documents:</h4>
+                    <label class="checkbox-label"><input type="checkbox" @bind="docLicense" /> Driver's License</label>
+                    <label class="checkbox-label"><input type="checkbox" @bind="docIncome" /> Proof of Income</label>
+                    <label class="checkbox-label"><input type="checkbox" @bind="docResidence" /> Proof of Residence</label>
+                </div>
+                <div class="terms-box">
+                    <label class="checkbox-label"><input type="checkbox" @bind="termsAccepted" /> I agree to the Terms and Conditions</label>
+                </div>
+            }
+        </div>
+
+        <div class="action-bar">
+            @if (step > 1) { <button class="btn-outline-sm" @onclick="() => step--">Back</button> }
+            <button class="btn-warning-sm" @onclick="HandleSave" disabled="@saving">@(saving ? "Saving..." : "Save Draft")</button>
+            @if (step < 5) { <button class="btn-primary-sm" @onclick="HandleNext">Next</button> }
+            else { <button class="btn-success-sm" @onclick="HandleSubmit">Submit</button> }
+        </div>
+    </div>
+</div>
+
+<style>
+    .stepper-page { min-height: 100vh; background: #f5f5f5; }
+    .stepper-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+    .stepper-header h2 { margin: 0; font-weight: 700; }
+    .btn-back { background: none; border: none; color: #667eea; cursor: pointer; font-size: 1rem; }
+    .stepper-content { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+    .steps-bar { display: flex; justify-content: space-between; margin-bottom: 2rem; }
+    .step-item { display: flex; flex-direction: column; align-items: center; flex: 1; }
+    .step-circle { width: 32px; height: 32px; border-radius: 50%; background: #e5e7eb; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.25rem; }
+    .step-active .step-circle { background: #667eea; color: white; }
+    .step-done .step-circle { background: #10b981; color: white; }
+    .step-label { font-size: 0.75rem; color: #666; }
+    .step-active .step-label { color: #667eea; font-weight: 600; }
+    .form-card { background: white; border-radius: 8px; padding: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+    .form-card h3 { margin-bottom: 1.5rem; }
+    .form-row { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .form-group { margin-bottom: 1rem; flex: 1; min-width: 0; }
+    .form-group.half { flex: 1; }
+    .form-group label { display: block; margin-bottom: 0.25rem; font-weight: 500; font-size: 0.9rem; }
+    .form-group input, .form-group select { width: 100%; padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem; box-sizing: border-box; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 2px rgba(102,126,234,0.2); }
+    .radio-row { display: flex; gap: 1.5rem; padding: 0.5rem 0; }
+    .radio-label { display: flex; align-items: center; gap: 0.3rem; cursor: pointer; }
+    .summary-box { background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-top: 1.5rem; }
+    .summary-box h4 { margin-bottom: 0.75rem; }
+    .summary-row { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; }
+    .text-danger { color: #dc2626; font-weight: 600; }
+    .text-success { color: #059669; font-weight: 600; }
+    .term-cards { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+    .term-card { flex: 1; border: 2px solid #e5e7eb; border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; }
+    .term-selected { border-color: #667eea; background: #f0f0ff; }
+    .term-months { display: block; font-weight: 600; }
+    .term-payment { display: block; font-size: 1.8rem; font-weight: 700; color: #667eea; }
+    .term-apr { display: block; color: #666; font-size: 0.85rem; }
+    .payment-highlight { background: #667eea; color: white; text-align: center; padding: 1rem; border-radius: 8px; margin-top: 1rem; font-size: 1.5rem; font-weight: 700; }
+    .docs-section { margin: 1.5rem 0; }
+    .docs-section h4 { margin-bottom: 0.5rem; }
+    .checkbox-label { display: block; padding: 0.3rem 0; cursor: pointer; }
+    .terms-box { background: #eff6ff; padding: 1rem; border-radius: 4px; }
+    .btn-edit { background: none; border: none; color: #667eea; cursor: pointer; font-size: 0.85rem; }
+    .action-bar { display: flex; justify-content: flex-end; gap: 0.75rem; }
+    .btn-outline-sm { background: white; border: 1px solid #ccc; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+    .btn-warning-sm { background: #f59e0b; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    .btn-primary-sm { background: #667eea; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    .btn-success-sm { background: #10b981; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    .btn-primary-sm:hover, .btn-success-sm:hover, .btn-warning-sm:hover { opacity: 0.9; }
+    .alert-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; padding: 0.75rem; border-radius: 4px; margin-top: 1rem; }
+    .alert-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; padding: 0.75rem; border-radius: 4px; margin-top: 1rem; }
+</style>
+
+@code {
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    private int step = 1;
+    private bool saving = false, termsAccepted = false;
+    private bool docLicense = false, docIncome = false, docResidence = false;
+    private int selectedTerm = 48;
+
+    // Personal Info fields
+    private string pFirstName = "", pLastName = "", pDob = "", pSsn = "";
+    private string pAddress = "", pCity = "", pState = "", pZip = "";
+    private string pYearsAddr = "", pMonthsAddr = "", pPhone = "", pEmail = "";
+
+    // Car Details fields
+    private string cMake = "", cModel = "", cTrim = "", cYear = "";
+    private string cVin = "", cMileage = "", cPrice = "", cCondition = "";
+
+    // Loan Details fields
+    private string lAmount = "", lDownPayment = "";
+
+    // Employment fields
+    private string eEmployer = "", eJobTitle = "", eStatus = "";
+    private string eYears = "", eMonths = "", eIncome = "", eExpenses = "";
+    private string eOtherIncome = "", eCreditScore = "";
+
+    private string[] stepLabels = { "Personal Info", "Car Details", "Loan Details", "Employment", "Review" };
+    private string[] vehicleMakes = { "Toyota", "Honda", "Ford", "Chevrolet", "BMW", "Mercedes", "Nissan", "Hyundai", "Kia", "Volkswagen" };
+    private string[] usStates = { "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY" };
+    private (int Months, double Apr)[] loanTerms = { (36, 6.5), (48, 6.9), (60, 7.2) };
+
+    private double ParseNum(string val) => double.TryParse(val, out var v) ? v : 0;
+    private double VehicleValue => ParseNum(cPrice);
+    private double LoanAmount => ParseNum(lAmount);
+    private double DownPayment => ParseNum(lDownPayment);
+    private double Principal => LoanAmount - DownPayment;
+    private int Ltv => VehicleValue > 0 ? (int)Math.Round(Principal / VehicleValue * 100) : 0;
+    private double TotalIncome => ParseNum(eIncome) + ParseNum(eOtherIncome);
+    private (int Months, double Apr) SelectedTermData => loanTerms.FirstOrDefault(t => t.Months == selectedTerm);
+    private double MonthlyPayment => CalculatePayment(selectedTerm, SelectedTermData.Apr);
+    private int Dti => TotalIncome > 0 ? (int)Math.Round(MonthlyPayment / TotalIncome * 100) : 0;
+
+    private double CalculatePayment(int term, double apr)
+    {
+        if (Principal <= 0) return 0;
+        var r = apr / 100.0 / 12.0;
+        return (Principal * r * Math.Pow(1 + r, term)) / (Math.Pow(1 + r, term) - 1);
+    }
+
+    private async Task HandleSave()
+    {
+        saving = true;
+        await Task.Delay(300);
+        saving = false;
+    }
+
+    private async Task HandleNext() { await HandleSave(); if (step < 5) step++; }
+
+    private async Task HandleSubmit()
+    {
+        if (!termsAccepted) return;
+        await HandleSave();
+        await OnBack.InvokeAsync();
+    }
+}

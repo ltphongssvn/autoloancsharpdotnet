@@ -1,5 +1,7 @@
 @page "/officer-dashboard"
 @inject NavigationManager Nav
+@inject AutoLoan.Web.Services.AuthStateService AuthState
+@inject AutoLoan.Web.Services.AuthService AuthService
 
 <PageTitle>Officer Dashboard - Auto Loan</PageTitle>
 
@@ -7,7 +9,7 @@
     <div class="dashboard-header">
         <h2>Officer Dashboard</h2>
         <div class="header-actions">
-            <span class="welcome-text">Welcome, Officer</span>
+            <span class="welcome-text">Welcome, @(AuthState.User?.FirstName ?? "Officer")</span>
             <button class="btn-danger-sm" @onclick="HandleLogout">⎋ Logout</button>
         </div>
     </div>

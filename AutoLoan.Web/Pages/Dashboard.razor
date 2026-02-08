@@ -1,5 +1,7 @@
 @page "/dashboard"
 @inject NavigationManager Nav
+@inject AutoLoan.Web.Services.AuthStateService AuthState
+@inject AutoLoan.Web.Services.AuthService AuthService
 
 <PageTitle>Dashboard - Auto Loan</PageTitle>
 
@@ -20,7 +22,7 @@ else
 
     <div class="dashboard-content">
         <div class="welcome-section">
-            <h3>Welcome back, User!</h3>
+            <h3>Welcome back, @(AuthState.User?.FirstName ?? "User")!</h3>
             <div class="apps-header">
                 <span class="apps-label">My Applications</span>
                 <button class="btn-primary-sm" @onclick="HandleCreateApplication">+ New Application</button>

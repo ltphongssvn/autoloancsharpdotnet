@@ -1,0 +1,237 @@
+@inject NavigationManager Nav
+@inject AutoLoan.Web.Services.AuthStateService AuthState
+@inject AutoLoan.Web.Services.AuthService AuthService
+
+<PageTitle>Review Application - Auto Loan</PageTitle>
+
+<div class="review-page">
+    <div class="review-header">
+        <h2>Review Application</h2>
+        <div class="header-right">
+            <span>Welcome, @(AuthState.User?.FirstName ?? "Officer")</span>
+            <button class="btn-logout" @onclick="HandleLogout">Logout</button>
+        </div>
+    </div>
+
+    <div class="review-content">
+        <button class="btn-back" @onclick="OnBack">← Back to Dashboard</button>
+        <div class="title-row">
+            <h3>Application @AppId</h3>
+            <span class="chip chip-@StatusColor">@Status.Replace("_", " ").ToUpper()</span>
+        </div>
+
+        <div class="two-col">
+            <div class="col-main">
+                <div class="card card-border-green">
+                    <h4>Applicant Info</h4>
+                    <div class="info-grid-3">
+                        <div><span class="lbl">Name</span><span>@pFirstName @pLastName</span></div>
+                        <div><span class="lbl">DOB</span><span>@pDob</span></div>
+                        <div><span class="lbl">SSN</span><span>@(pSsn.Length >= 4 ? "***-**-" + pSsn[^4..] : "—")</span></div>
+                        <div><span class="lbl">Phone</span><span>@pPhone</span></div>
+                        <div><span class="lbl">Email</span><span>@pEmail</span></div>
+                        <div><span class="lbl">Address</span><span>@pAddress, @pCity, @pState @pZip</span></div>
+                    </div>
+                </div>
+
+                <div class="card card-border-blue">
+                    <h4>Vehicle Info</h4>
+                    <div class="info-grid-4">
+                        <div><span class="lbl">Make</span><span>@cMake</span></div>
+                        <div><span class="lbl">Model</span><span>@cModel</span></div>
+                        <div><span class="lbl">Year</span><span>@cYear</span></div>
+                        <div><span class="lbl">VIN</span><span>@cVin</span></div>
+                        <div><span class="lbl">Condition</span><span>@cCondition</span></div>
+                        <div><span class="lbl">Value</span><span>$@VehiclePrice.ToString("N0")</span></div>
+                    </div>
+                </div>
+
+                <div class="card card-border-purple">
+                    <h4>Loan Details</h4>
+                    <div class="info-grid-6">
+                        <div><span class="lbl">Amount</span><span>$@LoanAmt.ToString("N0")</span></div>
+                        <div><span class="lbl">Down</span><span>$@DownPmt.ToString("N0")</span></div>
+                        <div><span class="lbl">Term</span><span>@LoanTerm mo</span></div>
+                        <div><span class="lbl">APR</span><span>@Apr%</span></div>
+                        <div><span class="lbl">Monthly</span><span>$@Monthly.ToString("F2")</span></div>
+                        <div><span class="lbl">LTV</span><span>@Ltv%</span></div>
+                    </div>
+                </div>
+
+                <div class="card card-border-red">
+                    <h4>Employment &amp; Financial</h4>
+                    <div class="info-grid-5">
+                        <div><span class="lbl">Employer</span><span>@eEmployer</span></div>
+                        <div><span class="lbl">Title</span><span>@eJobTitle</span></div>
+                        <div><span class="lbl">Years</span><span>@eYears</span></div>
+                        <div><span class="lbl">Income</span><span>$@Income.ToString("N0")/yr</span></div>
+                        <div><span class="lbl">DTI</span><span>@Dti%</span></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h4>Documents</h4>
+                    @if (documents.Count > 0)
+                    {
+                        <table class="doc-table">
+                            <thead><tr><th>Document</th><th>Status</th><th>Actions</th></tr></thead>
+                            <tbody>
+                                @foreach (var doc in documents)
+                                {
+                                    <tr>
+                                        <td>@FormatDocType(doc.DocType)</td>
+                                        <td><span class="chip chip-sm chip-@DocStatusColor(doc.Status)">@doc.Status</span></td>
+                                        <td>
+                                            <button class="btn-icon" title="View">👁</button>
+                                            <button class="btn-icon btn-icon-red" title="Delete" @onclick="() => DeleteDoc(doc.Id)">🗑</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No documents uploaded yet.</p>
+                    }
+                </div>
+            </div>
+
+            <div class="col-side">
+                <div class="card">
+                    <h4>Verification Checklist</h4>
+                    <label class="check-item"><input type="checkbox" @bind="vAge" /> Applicant 18+</label>
+                    <label class="check-item"><input type="checkbox" @bind="vId" /> ID matches</label>
+                    <label class="check-item"><input type="checkbox" @bind="vResidency" /> Residency confirmed</label>
+                    <label class="check-item"><input type="checkbox" @bind="vEmployment" /> Employment verified</label>
+                    <label class="check-item"><input type="checkbox" @bind="vDocs" /> Documents legible</label>
+                </div>
+
+                <div class="card">
+                    <h4>Internal Notes</h4>
+                    <textarea rows="2" placeholder="Add note..." @bind="noteText"></textarea>
+                    <button class="btn-outline-sm" @onclick="AddNote">Add Note</button>
+                    @if (notesList.Count > 0) { <hr /> }
+                    @foreach (var n in notesList)
+                    {
+                        <div class="note-item">
+                            <p>@n.Text</p>
+                            <span class="text-muted">@n.Date</span>
+                        </div>
+                    }
+                </div>
+
+                <div class="card card-decision">
+                    <h4>Decision Center</h4>
+                    <select @bind="selectedAction">
+                        <option value="">-- Select --</option>
+                        @if (Status == "submitted") { <option value="start_verification">Start Verification</option> }
+                        <option value="request_docs">Request Documents</option>
+                        @if (Status == "submitted" || Status == "pending") { <option value="review">Forward to Underwriter</option> }
+                    </select>
+                    <textarea rows="2" placeholder="Notes..." @bind="decisionNotes"></textarea>
+                    <button class="btn-primary" disabled="@(string.IsNullOrEmpty(selectedAction))" @onclick="SubmitDecision">Submit Decision</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .review-page { min-height: 100vh; background: #f5f5f5; }
+    .review-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+    .review-header h2 { margin: 0; font-weight: 700; }
+    .header-right { display: flex; align-items: center; gap: 1rem; }
+    .btn-logout { background: white; border: 1px solid #dc2626; color: #dc2626; padding: 0.4rem 1rem; border-radius: 4px; cursor: pointer; }
+    .review-content { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem; }
+    .btn-back { background: none; border: none; color: #667eea; cursor: pointer; font-size: 1rem; margin-bottom: 1rem; display: block; }
+    .title-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    .title-row h3 { margin: 0; }
+    .two-col { display: flex; gap: 1.5rem; }
+    .col-main { flex: 2; min-width: 0; }
+    .col-side { flex: 1; min-width: 280px; }
+    .card { background: white; border-radius: 8px; padding: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem; }
+    .card h4 { margin: 0 0 1rem; font-weight: 600; }
+    .card-border-green { border-left: 4px solid #10b981; }
+    .card-border-blue { border-left: 4px solid #3b82f6; }
+    .card-border-purple { border-left: 4px solid #667eea; }
+    .card-border-red { border-left: 4px solid #ef4444; }
+    .card-decision { background: #fef3c7; }
+    .info-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+    .info-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
+    .info-grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; }
+    .info-grid-6 { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.75rem; }
+    .info-grid-3 > div, .info-grid-4 > div, .info-grid-5 > div, .info-grid-6 > div { display: flex; flex-direction: column; }
+    .lbl { font-size: 0.75rem; color: #666; }
+    .chip { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 16px; font-size: 0.8rem; font-weight: 600; }
+    .chip-sm { font-size: 0.7rem; padding: 0.15rem 0.5rem; }
+    .chip-success { background: #dcfce7; color: #16a34a; }
+    .chip-error { background: #fef2f2; color: #dc2626; }
+    .chip-warning { background: #fffbeb; color: #b45309; }
+    .chip-info { background: #eff6ff; color: #2563eb; }
+    .chip-default { background: #f3f4f6; color: #374151; }
+    .text-muted { color: #666; font-size: 0.85rem; }
+    .doc-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .doc-table th, .doc-table td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #e5e7eb; }
+    .doc-table th { font-weight: 600; font-size: 0.85rem; color: #666; }
+    .btn-icon { background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0.2rem; }
+    .btn-icon-red { color: #dc2626; }
+    .check-item { display: block; padding: 0.3rem 0; cursor: pointer; }
+    textarea { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; margin-bottom: 0.5rem; resize: vertical; }
+    select { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; margin-bottom: 0.75rem; }
+    .btn-outline-sm { background: white; border: 1px solid #ccc; padding: 0.3rem 0.75rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+    .btn-primary { width: 100%; background: #667eea; color: white; border: none; padding: 0.6rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .note-item { background: #f9fafb; padding: 0.5rem; border-radius: 4px; margin-top: 0.5rem; }
+    .note-item p { margin: 0 0 0.25rem; font-size: 0.9rem; }
+    @@media (max-width: 900px) { .two-col { flex-direction: column; } .col-side { min-width: unset; } .info-grid-5, .info-grid-6 { grid-template-columns: repeat(3, 1fr); } }
+</style>
+
+@code {
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    private string Status = "submitted", AppId = "#APP-0001";
+    private string pFirstName = "", pLastName = "", pDob = "", pSsn = "", pPhone = "", pEmail = "";
+    private string pAddress = "", pCity = "", pState = "", pZip = "";
+    private string cMake = "", cModel = "", cYear = "", cVin = "", cCondition = "";
+    private double VehiclePrice = 0;
+    private string eEmployer = "", eJobTitle = "", eYears = "";
+    private double Income = 0;
+    private double LoanAmt = 0, DownPmt = 0, Apr = 6.9;
+    private int LoanTerm = 48;
+
+    private double Principal => LoanAmt - DownPmt;
+    private double Monthly { get { var r = Apr / 100 / 12; return Principal > 0 ? (Principal * r * Math.Pow(1+r, LoanTerm)) / (Math.Pow(1+r, LoanTerm) - 1) : 0; } }
+    private int Ltv => VehiclePrice > 0 ? (int)Math.Round(Principal / VehiclePrice * 100) : 0;
+    private int Dti => Income > 0 ? (int)Math.Round(Monthly * 12 / Income * 100) : 0;
+
+    private string StatusColor => Status switch { "approved" => "success", "rejected" => "error", _ => "warning" };
+
+    private bool vAge, vId, vResidency, vEmployment, vDocs;
+    private string noteText = "", decisionNotes = "", selectedAction = "";
+    private List<(int Id, string Text, string Date)> notesList = new();
+    private List<(int Id, string DocType, string Status)> documents = new();
+
+    private string FormatDocType(string dt) => string.Join(" ", dt.Split('_').Select(w => char.ToUpper(w[0]) + w[1..]));
+    private string DocStatusColor(string s) => s == "verified" ? "success" : s == "rejected" ? "error" : "warning";
+
+    private void AddNote()
+    {
+        if (string.IsNullOrWhiteSpace(noteText)) return;
+        notesList.Insert(0, (notesList.Count + 1, noteText, DateTime.Now.ToShortDateString()));
+        noteText = "";
+    }
+
+    private void DeleteDoc(int id) => documents.RemoveAll(d => d.Id == id);
+
+    private async Task SubmitDecision()
+    {
+        if (string.IsNullOrEmpty(selectedAction)) return;
+        // TODO: Wire to API
+        await Task.CompletedTask;
+        selectedAction = "";
+        decisionNotes = "";
+    }
+
+    private async Task HandleLogout() { await AuthService.LogoutAsync(); Nav.NavigateTo("/"); }
+}

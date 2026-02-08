@@ -1,0 +1,71 @@
+@inject NavigationManager Nav
+
+<div class="modal-overlay" @onclick="OnClose">
+    <div class="modal" @onclick:stopPropagation="true">
+        <h3>Request Additional Documents</h3>
+        <p class="text-muted">Application @AppId</p>
+
+        <label style="font-weight:600;margin-top:0.75rem;display:block">Select documents to request:</label>
+        @foreach (var dt in docTypes)
+        {
+            var item = dt;
+            <label class="check-item">
+                <input type="checkbox" checked="@selectedDocs.Contains(item.Id)" @onchange="() => ToggleDoc(item.Id)" />
+                @item.Label
+            </label>
+            @if (item.Id == "other" && selectedDocs.Contains("other"))
+            {
+                <input class="other-input" placeholder="Specify document type..." @bind="otherText" />
+            }
+        }
+
+        <label style="font-weight:600;margin-top:1rem;display:block">Notes to applicant:</label>
+        <textarea rows="3" placeholder="Please provide bank statements..." @bind="notes"></textarea>
+
+        <div class="modal-actions">
+            <button class="btn-outline-sm" @onclick="OnClose">Cancel</button>
+            <button class="btn-primary" @onclick="HandleSend">Send Request</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal { background: white; border-radius: 8px; padding: 2rem; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto; }
+    .modal h3 { margin: 0 0 0.5rem; }
+    .text-muted { color: #666; font-size: 0.85rem; }
+    .check-item { display: block; padding: 0.25rem 0; cursor: pointer; }
+    .other-input { width: calc(100% - 2rem); margin-left: 2rem; margin-top: 0.25rem; padding: 0.4rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; }
+    textarea { width: 100%; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; box-sizing: border-box; margin-top: 0.5rem; resize: vertical; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 1.5rem; }
+    .btn-outline-sm { background: white; border: 1px solid #ccc; padding: 0.4rem 0.75rem; border-radius: 4px; cursor: pointer; }
+    .btn-primary { background: #667eea; color: white; border: none; padding: 0.4rem 0.75rem; border-radius: 4px; cursor: pointer; font-weight: 600; }
+</style>
+
+@code {
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnSuccess { get; set; }
+    [Parameter] public string AppId { get; set; } = "#APP-0001";
+
+    private List<string> selectedDocs = new();
+    private string otherText = "", notes = "";
+
+    private (string Id, string Label)[] docTypes = {
+        ("bank_statement", "Bank Statements (3 months)"),
+        ("other_tax", "Tax Returns"),
+        ("proof_income", "Additional Pay Stubs"),
+        ("insurance", "Proof of Insurance"),
+        ("vehicle_purchase", "Vehicle Purchase Agreement"),
+        ("other", "Other")
+    };
+
+    private void ToggleDoc(string id) { if (selectedDocs.Contains(id)) selectedDocs.Remove(id); else selectedDocs.Add(id); }
+
+    private async Task HandleSend()
+    {
+        if (selectedDocs.Count == 0) return;
+        // TODO: Wire to API
+        await OnSuccess.InvokeAsync();
+        await OnClose.InvokeAsync();
+    }
+}

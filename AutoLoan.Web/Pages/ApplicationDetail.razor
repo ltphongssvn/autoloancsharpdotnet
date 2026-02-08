@@ -1,0 +1,128 @@
+@inject NavigationManager Nav
+
+<PageTitle>Application Details - Auto Loan</PageTitle>
+
+<div class="detail-page">
+    <div class="detail-header">
+        <h2>Application Details</h2>
+    </div>
+
+    <div class="detail-content">
+        <button class="btn-back" @onclick="OnBack">← Back to Dashboard</button>
+
+        <div class="title-row">
+            <h3>Application #@AppIdDisplay</h3>
+            <span class="chip chip-@StatusColor">@Status.Replace("_", " ").ToUpper()</span>
+        </div>
+
+        <div class="card">
+            <h4>Personal Information</h4>
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">Name</span><span>@pFirstName @pLastName</span></div>
+                <div class="info-item"><span class="info-label">Email</span><span>@pEmail</span></div>
+                <div class="info-item"><span class="info-label">Phone</span><span>@pPhone</span></div>
+                <div class="info-item"><span class="info-label">DOB</span><span>@pDob</span></div>
+                <div class="info-item"><span class="info-label">Address</span><span>@pAddress, @pCity, @pState @pZip</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h4>Vehicle Details</h4>
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">Make</span><span>@cMake</span></div>
+                <div class="info-item"><span class="info-label">Model</span><span>@cModel</span></div>
+                <div class="info-item"><span class="info-label">Year</span><span>@cYear</span></div>
+                <div class="info-item"><span class="info-label">Price</span><span>@cPrice</span></div>
+                <div class="info-item"><span class="info-label">Condition</span><span>@cCondition</span></div>
+                <div class="info-item"><span class="info-label">VIN</span><span>@cVin</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h4>Loan Details</h4>
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">Amount</span><span>@lAmount</span></div>
+                <div class="info-item"><span class="info-label">Down Payment</span><span>@lDownPayment</span></div>
+                <div class="info-item"><span class="info-label">Term</span><span>@LoanTerm</span></div>
+                <div class="info-item"><span class="info-label">Interest Rate</span><span>@InterestRate</span></div>
+                <div class="info-item"><span class="info-label">Monthly Payment</span><span>@MonthlyPayment</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h4>Employment Information</h4>
+            <div class="info-grid">
+                <div class="info-item"><span class="info-label">Employer</span><span>@eEmployer</span></div>
+                <div class="info-item"><span class="info-label">Job Title</span><span>@eJobTitle</span></div>
+                <div class="info-item"><span class="info-label">Years</span><span>@eYears</span></div>
+                <div class="info-item"><span class="info-label">Annual Income</span><span>@eIncome</span></div>
+                <div class="info-item"><span class="info-label">Credit Score</span><span>@eCreditScore</span></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h4>Timeline</h4>
+            <p>Created: @CreatedAt</p>
+            @if (!string.IsNullOrEmpty(SubmittedAt)) { <p>Submitted: @SubmittedAt</p> }
+            @if (!string.IsNullOrEmpty(DecidedAt)) { <p>Decided: @DecidedAt</p> }
+        </div>
+
+        @if (CanSubmit)
+        {
+            <button class="btn-primary" @onclick="HandleSubmit">Submit Application</button>
+        }
+    </div>
+</div>
+
+<style>
+    .detail-page { min-height: 100vh; background: #f5f5f5; }
+    .detail-header { background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem 2rem; }
+    .detail-header h2 { margin: 0; font-weight: 700; }
+    .detail-content { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+    .btn-back { background: none; border: none; color: #667eea; cursor: pointer; font-size: 1rem; margin-bottom: 1rem; display: block; }
+    .title-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    .title-row h3 { margin: 0; }
+    .chip { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 16px; font-size: 0.8rem; font-weight: 600; }
+    .chip-default { background: #f3f4f6; color: #374151; }
+    .chip-info { background: #eff6ff; color: #2563eb; }
+    .chip-warning { background: #fffbeb; color: #b45309; }
+    .chip-success { background: #dcfce7; color: #16a34a; }
+    .chip-error { background: #fef2f2; color: #dc2626; }
+    .card { background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 1rem; }
+    .card h4 { margin-bottom: 1rem; font-weight: 600; }
+    .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .info-item { display: flex; flex-direction: column; }
+    .info-label { font-size: 0.8rem; color: #666; }
+    .btn-primary { background: #667eea; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; cursor: pointer; font-size: 1rem; font-weight: 600; }
+    .btn-primary:hover { background: #5a6fd6; }
+</style>
+
+@code {
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    // Stub data
+    private int AppIdDisplay = 1;
+    private string Status = "draft";
+    private bool CanSubmit = true;
+
+    private string pFirstName = "", pLastName = "", pEmail = "", pPhone = "", pDob = "";
+    private string pAddress = "", pCity = "", pState = "", pZip = "";
+    private string cMake = "", cModel = "", cYear = "", cPrice = "", cCondition = "", cVin = "";
+    private string lAmount = "", lDownPayment = "", LoanTerm = "", InterestRate = "", MonthlyPayment = "";
+    private string eEmployer = "", eJobTitle = "", eYears = "", eIncome = "", eCreditScore = "";
+    private string CreatedAt = DateTime.Now.ToString("g");
+    private string SubmittedAt = "", DecidedAt = "";
+
+    private string StatusColor => Status switch
+    {
+        "approved" => "success", "rejected" => "error",
+        "under_review" or "pending_documents" => "warning",
+        "submitted" => "info", _ => "default"
+    };
+
+    private async Task HandleSubmit()
+    {
+        // TODO: Wire to API
+        await Task.CompletedTask;
+    }
+}
