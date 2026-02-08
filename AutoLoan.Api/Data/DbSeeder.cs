@@ -7,7 +7,7 @@ public static class DbSeeder
 {
     public static async Task SeedAsync(ApplicationDbContext db)
     {
-        await db.Database.ExecuteSqlRawAsync("DELETE FROM financial_infos"); await db.Database.ExecuteSqlRawAsync("DELETE FROM addresses"); await db.Database.ExecuteSqlRawAsync("DELETE FROM vehicles"); await db.Database.ExecuteSqlRawAsync("DELETE FROM documents"); await db.Database.ExecuteSqlRawAsync("DELETE FROM application_notes"); await db.Database.ExecuteSqlRawAsync("DELETE FROM status_histories"); await db.Database.ExecuteSqlRawAsync("DELETE FROM applications"); await db.Database.ExecuteSqlRawAsync("DELETE FROM jwt_denylists"); await db.Database.ExecuteSqlRawAsync("DELETE FROM security_audit_logs"); await db.Database.ExecuteSqlRawAsync("DELETE FROM api_keys"); await db.Database.ExecuteSqlRawAsync("DELETE FROM users");
+        if (await db.Users.AnyAsync()) return;
 
         var now = DateTime.UtcNow;
         User MakeUser(string email, string first, string last, string phone, UserRole role) => new()
