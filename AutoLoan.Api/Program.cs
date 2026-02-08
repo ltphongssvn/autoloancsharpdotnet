@@ -76,6 +76,7 @@ app.UseCors("AllowBlazor");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok("healthy"));
+app.MapGet("/seed", async (ApplicationDbContext db) => { try { await AutoLoan.Api.Data.DbSeeder.SeedAsync(db); return Results.Ok("Seeded!"); } catch (Exception ex) { return Results.Problem($"{ex.Message} | {ex.InnerException?.Message}"); } });
 app.MapControllers();
 
 app.Run();
