@@ -17,33 +17,28 @@ public class AuthService
     public async Task<UserDto?> LoginAsync(string email, string password)
     {
         var response = await _http.PostAsJsonAsync("auth/login", new { email, password });
-        string? token = null;
-        if (token == null && response.Headers.Contains("Authorization"))
-            token = response.Headers.GetValues("Authorization").FirstOrDefault()?.Replace("Bearer ", "");
-
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ApiResponse<UserDto>>();
-
-        if (token != null) _authState.SetToken(token);
-        if (result?.Data != null) _authState.SetUser(result.Data);
-
-        return result?.Data;
+        var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
+        if (result?.Token != null) _authState.SetToken(result.Token);
+        if (result?.User != null) _authState.SetUser(result.User);
+        return result?.User;
     }
 
     public async Task<UserDto?> SignupAsync(SignupRequest request)
     {
-        var response = await _http.PostAsJsonAsync("auth/signup", request);
-        string? token = null;
-        if (token == null && response.Headers.Contains("Authorization"))
-            token = response.Headers.GetValues("Authorization").FirstOrDefault()?.Replace("Bearer ", "");
-
+        var response = await _http.PostAsJsonAsync("auth/register", new
+        {
+            email = request.Email,
+            password = request.Password,
+            firstName = request.FirstName,
+            lastName = request.LastName,
+            phone = request.Phone ?? ""
+        });
         response.EnsureSuccessStatusCode();
-        var result = await response.Content.ReadFromJsonAsync<ApiResponse<UserDto>>();
-
-        if (token != null) _authState.SetToken(token);
-        if (result?.Data != null) _authState.SetUser(result.Data);
-
-        return result?.Data;
+        var result = await response.Content.ReadFromJsonAsync<AuthResponse>();
+        if (result?.Token != null) _authState.SetToken(result.Token);
+        if (result?.User != null) _authState.SetUser(result.User);
+        return result?.User;
     }
 
     public async Task LogoutAsync()
@@ -56,12 +51,18 @@ public class AuthService
     {
         try
         {
-            var result = await _http.GetFromJsonAsync<ApiResponse<UserDto>>("auth/me");
-            if (result?.Data != null) _authState.SetUser(result.Data);
-            return result?.Data;
+            var result = await _http.GetFromJsonAsync<AuthResponse>("auth/me");
+            if (result?.User != null) _authState.SetUser(result.User);
+            return result?.User;
         }
         catch { _authState.Clear(); return null; }
     }
+}
+
+public class AuthResponse
+{
+    [JsonPropertyName("token")] public string? Token { get; set; }
+    [JsonPropertyName("user")] public UserDto? User { get; set; }
 }
 
 public class AuthStateService
@@ -70,7 +71,6 @@ public class AuthStateService
     public string? Token { get; private set; }
     public bool IsAuthenticated => User != null;
     public event Action? OnChange;
-
     public void SetUser(UserDto user) { User = user; OnChange?.Invoke(); }
     public void SetToken(string token) { Token = token; OnChange?.Invoke(); }
     public void Clear() { User = null; Token = null; OnChange?.Invoke(); }
@@ -80,7 +80,6 @@ public class AuthHeaderHandler : DelegatingHandler
 {
     private readonly AuthStateService _authState;
     public AuthHeaderHandler(AuthStateService authState) => _authState = authState;
-
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
     {
         if (_authState.Token != null)
@@ -93,22 +92,21 @@ public class UserDto
 {
     [JsonPropertyName("id")] public int Id { get; set; }
     [JsonPropertyName("email")] public string Email { get; set; } = "";
-    [JsonPropertyName("first_name")] public string FirstName { get; set; } = "";
-    [JsonPropertyName("last_name")] public string LastName { get; set; } = "";
+    [JsonPropertyName("firstName")] public string FirstName { get; set; } = "";
+    [JsonPropertyName("lastName")] public string LastName { get; set; } = "";
     [JsonPropertyName("phone")] public string? Phone { get; set; }
     [JsonPropertyName("role")] public string Role { get; set; } = "customer";
-    [JsonPropertyName("full_name")] public string FullName { get; set; } = "";
 }
 
 public class SignupRequest
 {
-    [JsonPropertyName("first_name")] public string FirstName { get; set; } = "";
-    [JsonPropertyName("last_name")] public string LastName { get; set; } = "";
+    [JsonPropertyName("firstName")] public string FirstName { get; set; } = "";
+    [JsonPropertyName("lastName")] public string LastName { get; set; } = "";
     [JsonPropertyName("phone")] public string? Phone { get; set; }
     [JsonPropertyName("email")] public string Email { get; set; } = "";
     [JsonPropertyName("password")] public string Password { get; set; } = "";
-    [JsonPropertyName("password_confirmation")] public string PasswordConfirmation { get; set; } = "";
-    [JsonPropertyName("role")] public string Role { get; set; } = "borrower";
+    [JsonPropertyName("passwordConfirmation")] public string PasswordConfirmation { get; set; } = "";
+    [JsonPropertyName("role")] public string Role { get; set; } = "customer";
 }
 
 public class ApiResponse<T>
