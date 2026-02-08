@@ -89,8 +89,8 @@
             {
                 var route = user.Role switch
                 {
-                    "loan_officer" => "/officer-dashboard",
-                    "underwriter" => "/underwriter-dashboard",
+                    1 => "/officer-dashboard",
+                    2 => "/underwriter-dashboard",
                     _ => "/dashboard"
                 };
                 Nav.NavigateTo(route);

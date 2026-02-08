@@ -95,7 +95,7 @@ public class UserDto
     [JsonPropertyName("firstName")] public string FirstName { get; set; } = "";
     [JsonPropertyName("lastName")] public string LastName { get; set; } = "";
     [JsonPropertyName("phone")] public string? Phone { get; set; }
-    [JsonPropertyName("role")] public string Role { get; set; } = "customer";
+    [JsonPropertyName("role")] public int Role { get; set; }
 }
 
 public class SignupRequest
@@ -106,7 +106,7 @@ public class SignupRequest
     [JsonPropertyName("email")] public string Email { get; set; } = "";
     [JsonPropertyName("password")] public string Password { get; set; } = "";
     [JsonPropertyName("passwordConfirmation")] public string PasswordConfirmation { get; set; } = "";
-    [JsonPropertyName("role")] public string Role { get; set; } = "customer";
+    [JsonPropertyName("role")] public int Role { get; set; }
 }
 
 public class ApiResponse<T>
