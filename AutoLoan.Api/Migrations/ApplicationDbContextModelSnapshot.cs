@@ -622,7 +622,7 @@ namespace AutoLoan.Api.Migrations
 
                     b.HasIndex("Vin")
                         .IsUnique()
-                        .HasFilter("vin IS NOT NULL");
+                        .HasFilter("\"Vin\" IS NOT NULL");
 
                     b.ToTable("vehicles", (string)null);
                 });

@@ -1,4 +1,5 @@
 using AutoLoan.Api.Data;
+using AutoLoan.Api.Services;
 using AutoLoan.Shared.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,10 +14,12 @@ namespace AutoLoan.Api.Controllers.Api.V1;
 public class ApplicationsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly ApplicationWorkflowService _workflowService;
 
-    public ApplicationsController(ApplicationDbContext context)
+    public ApplicationsController(ApplicationDbContext context, ApplicationWorkflowService workflowService)
     {
         _context = context;
+        _workflowService = workflowService;
     }
 
     private long GetUserId() => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -89,16 +92,35 @@ public class ApplicationsController : ControllerBase
             .FirstOrDefaultAsync(a => a.Id == id && a.UserId == GetUserId());
 
         if (application == null) return NotFound();
-        if (application.Status != ApplicationStatus.Draft)
-            return BadRequest(new { error = "Application already submitted" });
 
-        application.Status = ApplicationStatus.Submitted;
-        application.SubmittedAt = DateTime.UtcNow;
-        application.ApplicationNumber = $"AL-{DateTime.UtcNow:yyyyMMdd}-{application.Id:D6}";
-        application.UpdatedAt = DateTime.UtcNow;
+        try
+        {
+            await _workflowService.SubmitAsync(application, GetUserId());
+            return Ok(application);
+        }
+        catch (TransitionException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 
-        await _context.SaveChangesAsync();
-        return Ok(application);
+    [HttpPost("{id}/sign")]
+    public async Task<IActionResult> Sign(long id, [FromBody] SignRequest request)
+    {
+        var application = await _context.Applications
+            .FirstOrDefaultAsync(a => a.Id == id && a.UserId == GetUserId());
+
+        if (application == null) return NotFound();
+
+        try
+        {
+            await _workflowService.SignAsync(application, request.SignatureData);
+            return Ok(application);
+        }
+        catch (TransitionException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     [HttpDelete("{id}")]
@@ -116,6 +138,8 @@ public class ApplicationsController : ControllerBase
         return NoContent();
     }
 }
+
+public record SignRequest(string SignatureData);
 
 public record UpdateApplicationRequest(
     int? CurrentStep, DateTime? Dob, decimal? LoanAmount, 

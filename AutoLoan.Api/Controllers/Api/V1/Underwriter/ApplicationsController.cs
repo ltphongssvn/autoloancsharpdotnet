@@ -1,8 +1,10 @@
 using AutoLoan.Api.Data;
+using AutoLoan.Api.Services;
 using AutoLoan.Shared.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace AutoLoan.Api.Controllers.Api.V1.Underwriter;
 
@@ -12,11 +14,15 @@ namespace AutoLoan.Api.Controllers.Api.V1.Underwriter;
 public class ApplicationsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly ApplicationWorkflowService _workflowService;
 
-    public ApplicationsController(ApplicationDbContext context)
+    public ApplicationsController(ApplicationDbContext context, ApplicationWorkflowService workflowService)
     {
         _context = context;
+        _workflowService = workflowService;
     }
+
+    private long GetUserId() => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] string? status)
@@ -59,17 +65,15 @@ public class ApplicationsController : ControllerBase
         var application = await _context.Applications.FindAsync(id);
         if (application == null) return NotFound();
 
-        if (application.Status != ApplicationStatus.UnderReview)
-            return BadRequest(new { error = "Application not under review" });
-
-        application.Status = ApplicationStatus.Approved;
-        application.InterestRate = request.InterestRate;
-        application.MonthlyPayment = request.MonthlyPayment;
-        application.DecidedAt = DateTime.UtcNow;
-        application.UpdatedAt = DateTime.UtcNow;
-
-        await _context.SaveChangesAsync();
-        return Ok(application);
+        try
+        {
+            await _workflowService.ApproveAsync(application, GetUserId(), request.InterestRate, request.MonthlyPayment);
+            return Ok(application);
+        }
+        catch (TransitionException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     [HttpPost("{id}/reject")]
@@ -78,16 +82,15 @@ public class ApplicationsController : ControllerBase
         var application = await _context.Applications.FindAsync(id);
         if (application == null) return NotFound();
 
-        if (application.Status != ApplicationStatus.UnderReview)
-            return BadRequest(new { error = "Application not under review" });
-
-        application.Status = ApplicationStatus.Rejected;
-        application.RejectionReason = request.Reason;
-        application.DecidedAt = DateTime.UtcNow;
-        application.UpdatedAt = DateTime.UtcNow;
-
-        await _context.SaveChangesAsync();
-        return Ok(application);
+        try
+        {
+            await _workflowService.RejectAsync(application, GetUserId(), request.Reason);
+            return Ok(application);
+        }
+        catch (TransitionException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 }
 

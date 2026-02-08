@@ -450,7 +450,7 @@ namespace AutoLoan.Api.Migrations
                 table: "vehicles",
                 column: "Vin",
                 unique: true,
-                filter: "vin IS NOT NULL");
+                filter: "\"Vin\" IS NOT NULL");
         }
 
         /// <inheritdoc />

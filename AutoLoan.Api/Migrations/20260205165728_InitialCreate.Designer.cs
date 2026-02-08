@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AutoLoan.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260205160818_InitialCreate")]
+    [Migration("20260205165728_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -625,7 +625,7 @@ namespace AutoLoan.Api.Migrations
 
                     b.HasIndex("Vin")
                         .IsUnique()
-                        .HasFilter("vin IS NOT NULL");
+                        .HasFilter("\"Vin\" IS NOT NULL");
 
                     b.ToTable("vehicles", (string)null);
                 });

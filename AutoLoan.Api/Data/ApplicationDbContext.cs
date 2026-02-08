@@ -53,7 +53,7 @@ public class ApplicationDbContext : DbContext
         {
             entity.ToTable("vehicles");
             entity.HasIndex(e => e.ApplicationId).IsUnique();
-            entity.HasIndex(e => e.Vin).IsUnique().HasFilter("vin IS NOT NULL");
+            entity.HasIndex(e => e.Vin).IsUnique().HasFilter("\"Vin\" IS NOT NULL");
             entity.HasOne(e => e.Application).WithOne(a => a.Vehicle).HasForeignKey<Vehicle>(e => e.ApplicationId);
             entity.Property(e => e.EstimatedValue).HasPrecision(10, 2);
         });

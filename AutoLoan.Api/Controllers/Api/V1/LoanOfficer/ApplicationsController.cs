@@ -1,8 +1,10 @@
 using AutoLoan.Api.Data;
+using AutoLoan.Api.Services;
 using AutoLoan.Shared.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace AutoLoan.Api.Controllers.Api.V1.LoanOfficer;
 
@@ -12,11 +14,15 @@ namespace AutoLoan.Api.Controllers.Api.V1.LoanOfficer;
 public class ApplicationsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly ApplicationWorkflowService _workflowService;
 
-    public ApplicationsController(ApplicationDbContext context)
+    public ApplicationsController(ApplicationDbContext context, ApplicationWorkflowService workflowService)
     {
         _context = context;
+        _workflowService = workflowService;
     }
+
+    private long GetUserId() => long.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpGet]
     public async Task<IActionResult> Index([FromQuery] string? status)
@@ -55,13 +61,15 @@ public class ApplicationsController : ControllerBase
         var application = await _context.Applications.FindAsync(id);
         if (application == null) return NotFound();
 
-        if (application.Status != ApplicationStatus.Submitted)
-            return BadRequest(new { error = "Application not in submitted status" });
-
-        application.Status = ApplicationStatus.UnderReview;
-        application.UpdatedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-        return Ok(application);
+        try
+        {
+            await _workflowService.MoveToReviewAsync(application, GetUserId());
+            return Ok(application);
+        }
+        catch (TransitionException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     [HttpPost("{id}/request_documents")]
@@ -70,25 +78,30 @@ public class ApplicationsController : ControllerBase
         var application = await _context.Applications.FindAsync(id);
         if (application == null) return NotFound();
 
-        application.Status = ApplicationStatus.PendingDocuments;
-        application.UpdatedAt = DateTime.UtcNow;
-
-        foreach (var docType in request.DocumentTypes)
+        try
         {
-            _context.Documents.Add(new Document
-            {
-                ApplicationId = id,
-                FileName = $"Requested: {docType}",
-                DocType = docType,
-                Status = DocumentStatus.Requested,
-                RequestNote = request.Note,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            });
-        }
+            await _workflowService.RequestDocumentsAsync(application, GetUserId(), request.Note);
 
-        await _context.SaveChangesAsync();
-        return Ok(application);
+            foreach (var docType in request.DocumentTypes)
+            {
+                _context.Documents.Add(new Document
+                {
+                    ApplicationId = id,
+                    FileName = $"Requested: {docType}",
+                    DocType = docType,
+                    Status = DocumentStatus.Requested,
+                    RequestNote = request.Note,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
+            await _context.SaveChangesAsync();
+            return Ok(application);
+        }
+        catch (TransitionException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 }
 
