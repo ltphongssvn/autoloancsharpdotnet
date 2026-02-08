@@ -1,0 +1,94 @@
+@page "/account-locked"
+@inject NavigationManager Nav
+
+<PageTitle>Account Locked - Auto Loan</PageTitle>
+
+<div class="confirm-page">
+    <div class="confirm-card">
+        @if (status == "sent")
+        {
+            <div class="icon-success">&#10004;</div>
+            <h2>Unlock Email Sent</h2>
+            <div class="alert-success">@message</div>
+            <a href="/login" class="btn-primary">Back to Login</a>
+        }
+        else
+        {
+            <div class="icon-lock">&#128274;</div>
+            <h2>Account Locked</h2>
+            <div class="alert-warning">Your account has been locked due to too many failed login attempts.</div>
+
+            @if (status == "error")
+            {
+                <div class="alert-error">@message</div>
+            }
+
+            <p class="unlock-text">Click below to receive unlock instructions via email.</p>
+            <div class="button-row">
+                <button class="btn-primary" @onclick="HandleResendUnlock" disabled="@(status == "sending")">
+                    @(status == "sending" ? "Sending..." : "Send Unlock Instructions")
+                </button>
+                <a href="/login" class="btn-outline">Back to Login</a>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .confirm-page {
+        min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .confirm-card {
+        background: white; width: 100%; max-width: 500px; margin: 1rem;
+        border-radius: 8px; padding: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.15); text-align: center;
+    }
+    .confirm-card h2 { color: #333; margin-bottom: 1rem; }
+    .icon-lock { font-size: 3rem; margin-bottom: 0.5rem; }
+    .icon-success { font-size: 3rem; color: #16a34a; margin-bottom: 0.5rem; }
+    .alert-warning {
+        background: #fffbeb; color: #b45309; border: 1px solid #fde68a;
+        padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem;
+    }
+    .alert-success {
+        background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;
+        padding: 0.75rem; border-radius: 4px; margin-bottom: 1.5rem;
+    }
+    .alert-error {
+        background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;
+        padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem;
+    }
+    .unlock-text { color: #666; margin-bottom: 1.5rem; }
+    .btn-primary {
+        background: #667eea; color: white; border: none; padding: 0.75rem 1.5rem;
+        font-size: 1rem; border-radius: 4px; cursor: pointer; font-weight: 600; text-decoration: none; display: inline-block;
+    }
+    .btn-primary:hover { background: #5a6fd6; }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-outline {
+        border: 2px solid #667eea; color: #667eea; padding: 0.6rem 1.5rem;
+        border-radius: 4px; text-decoration: none; font-weight: 600;
+    }
+    .button-row { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+</style>
+
+@code {
+    private string status = "locked", message = "";
+
+    private async Task HandleResendUnlock()
+    {
+        status = "sending";
+        try
+        {
+            // TODO: Call unlock API
+            await Task.Delay(500);
+            status = "sent";
+            message = "Unlock instructions have been sent to your email.";
+        }
+        catch (Exception ex)
+        {
+            status = "error";
+            message = ex.Message;
+        }
+    }
+}

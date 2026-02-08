@@ -1,0 +1,245 @@
+@page "/officer-dashboard"
+@inject NavigationManager Nav
+
+<PageTitle>Officer Dashboard - Auto Loan</PageTitle>
+
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h2>Officer Dashboard</h2>
+        <div class="header-actions">
+            <span class="welcome-text">Welcome, Officer</span>
+            <button class="btn-danger-sm" @onclick="HandleLogout">⎋ Logout</button>
+        </div>
+    </div>
+
+    <div class="dashboard-content">
+        <div class="stats-row">
+            <div class="stat-card stat-warning">
+                <span class="stat-number">@stats.UnderReview</span>
+                <span class="stat-label">Pending Review</span>
+            </div>
+            <div class="stat-card stat-info">
+                <span class="stat-number">@stats.Submitted</span>
+                <span class="stat-label">New Applications</span>
+            </div>
+            <div class="stat-card stat-success">
+                <span class="stat-number">@stats.Pending</span>
+                <span class="stat-label">Verifying</span>
+            </div>
+        </div>
+
+        <div class="filter-card">
+            <div class="tabs">
+                @foreach (var tab in tabs)
+                {
+                    <button class="tab @(filter == tab.Value ? "tab-active" : "")" @onclick="() => { filter = tab.Value; currentPage = 1; }">
+                        @tab.Label
+                    </button>
+                }
+            </div>
+            <div class="filter-row">
+                <select @bind="dateFilter" @bind:after="() => currentPage = 1">
+                    <option value="all">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="week">Last 7 Days</option>
+                    <option value="month">Last 30 Days</option>
+                </select>
+                <input type="text" placeholder="Search by name or ID..." @bind="searchTerm" @bind:event="oninput" />
+            </div>
+        </div>
+
+        @if (loading)
+        {
+            <div class="loading-box"><div class="spinner"></div><p>Loading applications...</p></div>
+        }
+        else
+        {
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Applicant</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!PaginatedApps.Any())
+                        {
+                            <tr><td colspan="6" class="empty-row">No applications found</td></tr>
+                        }
+                        @foreach (var app in PaginatedApps)
+                        {
+                            <tr>
+                                <td>@app.AppNumber</td>
+                                <td>@app.ApplicantName</td>
+                                <td>@app.Amount.ToString("C0")</td>
+                                <td><span class="status-chip status-@app.Status">@app.Status.Replace("_", " ")</span></td>
+                                <td>@app.CreatedAt.ToShortDateString()</td>
+                                <td><button class="btn-view" @onclick="() => selectedAppId = app.Id">👁 Review</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (TotalPages > 1)
+            {
+                <div class="pagination">
+                    @for (int i = 1; i <= TotalPages; i++)
+                    {
+                        var pg = i;
+                        <button class="page-btn @(currentPage == pg ? "page-active" : "")" @onclick="() => currentPage = pg">@pg</button>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<style>
+    .dashboard { min-height: 100vh; background: #f5f5f5; }
+    .dashboard-header {
+        background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem 2rem;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .dashboard-header h2 { font-weight: 700; color: #333; margin: 0; }
+    .header-actions { display: flex; align-items: center; gap: 1rem; }
+    .welcome-text { color: #666; font-size: 0.9rem; }
+    .btn-danger-sm {
+        background: white; border: 1px solid #dc2626; color: #dc2626;
+        padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;
+    }
+    .dashboard-content { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
+    .stats-row { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; }
+    .stat-card {
+        flex: 1; padding: 1.5rem; border-radius: 8px; text-align: center;
+    }
+    .stat-warning { background: #fff3cd; }
+    .stat-info { background: #cfe2ff; }
+    .stat-success { background: #d1e7dd; }
+    .stat-number { display: block; font-size: 2rem; font-weight: 700; }
+    .stat-label { font-weight: 600; }
+    .filter-card {
+        background: white; border-radius: 8px; margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden;
+    }
+    .tabs { display: flex; border-bottom: 1px solid #e5e7eb; }
+    .tab {
+        padding: 0.75rem 1.25rem; background: none; border: none; cursor: pointer;
+        font-size: 0.9rem; color: #666; border-bottom: 2px solid transparent;
+    }
+    .tab-active { color: #667eea; border-bottom-color: #667eea; font-weight: 600; }
+    .filter-row { display: flex; gap: 1rem; padding: 1rem; }
+    .filter-row select { padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; }
+    .filter-row input { flex: 1; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; }
+    .loading-box { text-align: center; padding: 3rem; }
+    .spinner {
+        width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #667eea;
+        border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem;
+    }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+    .table-container {
+        background: white; border-radius: 8px; overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f9fafb; }
+    th { padding: 0.75rem 1rem; text-align: left; font-weight: 600; font-size: 0.85rem; color: #666; }
+    td { padding: 0.75rem 1rem; border-top: 1px solid #e5e7eb; font-size: 0.9rem; }
+    tr:hover { background: #f9fafb; }
+    .empty-row { text-align: center; color: #999; padding: 2rem !important; }
+    .status-chip {
+        padding: 0.2rem 0.75rem; border-radius: 12px; font-size: 0.8rem;
+        font-weight: 600; text-transform: capitalize;
+    }
+    .status-submitted { background: #dbeafe; color: #2563eb; }
+    .status-pending { background: #fef3c7; color: #b45309; }
+    .status-under_review { background: #e9d5ff; color: #7c3aed; }
+    .status-pending_documents { background: #fef3c7; color: #b45309; }
+    .status-approved { background: #d1fae5; color: #059669; }
+    .status-rejected { background: #fee2e2; color: #dc2626; }
+    .btn-view {
+        background: none; border: 1px solid #667eea; color: #667eea;
+        padding: 0.3rem 0.75rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem;
+    }
+    .pagination { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1.5rem; }
+    .page-btn {
+        width: 36px; height: 36px; border: 1px solid #ccc; border-radius: 4px;
+        background: white; cursor: pointer;
+    }
+    .page-active { background: #667eea; color: white; border-color: #667eea; }
+</style>
+
+@code {
+    private bool loading = true;
+    private string filter = "all", dateFilter = "all", searchTerm = "";
+    private int currentPage = 1, selectedAppId = 0;
+    private const int ItemsPerPage = 10;
+    private List<OfficerAppItem> applications = new();
+
+    private (int Submitted, int Pending, int UnderReview) stats =>
+        (applications.Count(a => a.Status == "submitted"),
+         applications.Count(a => a.Status == "pending"),
+         applications.Count(a => a.Status == "under_review"));
+
+    private List<(string Label, string Value)> tabs = new()
+    {
+        ("All", "all"), ("New", "submitted"), ("Verifying", "pending"),
+        ("Under Review", "under_review"), ("Pending Docs", "pending_documents")
+    };
+
+    private IEnumerable<OfficerAppItem> FilteredApps
+    {
+        get
+        {
+            var result = filter == "all" ? applications : applications.Where(a => a.Status == filter);
+            if (dateFilter != "all")
+            {
+                var cutoff = dateFilter switch
+                {
+                    "today" => DateTime.Today,
+                    "week" => DateTime.Now.AddDays(-7),
+                    "month" => DateTime.Now.AddDays(-30),
+                    _ => DateTime.MinValue
+                };
+                result = result.Where(a => a.CreatedAt >= cutoff);
+            }
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                var term = searchTerm.ToLower();
+                result = result.Where(a => a.ApplicantName.ToLower().Contains(term) || a.AppNumber.ToLower().Contains(term));
+            }
+            return result;
+        }
+    }
+
+    private int TotalPages => (int)Math.Ceiling((double)FilteredApps.Count() / ItemsPerPage);
+    private IEnumerable<OfficerAppItem> PaginatedApps => FilteredApps.Skip((currentPage - 1) * ItemsPerPage).Take(ItemsPerPage);
+
+    protected override async Task OnInitializedAsync()
+    {
+        // TODO: Call API
+        await Task.Delay(300);
+        applications = new();
+        loading = false;
+    }
+
+    private void HandleLogout()
+    {
+        Nav.NavigateTo("/");
+    }
+
+    private class OfficerAppItem
+    {
+        public int Id { get; set; }
+        public string AppNumber { get; set; } = "";
+        public string ApplicantName { get; set; } = "";
+        public decimal Amount { get; set; }
+        public string Status { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+    }
+}

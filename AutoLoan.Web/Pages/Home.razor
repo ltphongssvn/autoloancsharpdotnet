@@ -1,7 +1,210 @@
-﻿@page "/"
+@page "/"
+@using System.Globalization
+@inject NavigationManager Nav
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Auto Loan - Vehicle Financing</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="landing-page">
+    <nav class="landing-nav">
+        <span class="nav-brand">Auto Loan</span>
+        <button class="btn-login" @onclick="NavigateToLogin">Login</button>
+    </nav>
 
-Welcome to your new app.
+    <div class="hero-section">
+        <h1>Get Your Auto Loan in 15 minutes</h1>
+        <p class="hero-subtitle">Fast online approval with minimal documentation. Drive away in your new car today.</p>
+        <button class="btn-apply-hero" @onclick="NavigateToApply">Apply Now</button>
+    </div>
+
+    <div class="calculator-card">
+        <h2>Calculate Your Payments</h2>
+
+        <div class="slider-group">
+            <label>Loan Amount <span class="slider-value">@loanAmount.ToString("C0")</span></label>
+            <input type="range" min="5000" max="100000" step="1000"
+                   value="@loanAmount" @oninput="OnLoanAmountChanged" />
+        </div>
+
+        <div class="slider-group">
+            <label>Loan Term (Months) <span class="slider-value">@loanTerm mo</span></label>
+            <input type="range" min="12" max="84" step="12"
+                   value="@loanTerm" @oninput="OnLoanTermChanged" />
+        </div>
+
+        <div class="select-group">
+            <label>Interest Rate (APR)</label>
+            <select @bind="apr">
+                @foreach (var rate in aprOptions)
+                {
+                    <option value="@rate">@rate% APR</option>
+                }
+            </select>
+        </div>
+
+        <div class="payment-display">
+            <span class="payment-label">Your Monthly Payment</span>
+            <span class="payment-amount">@CalculateMonthlyPayment().ToString("C2")</span>
+        </div>
+
+        <button class="btn-apply-card" @onclick="NavigateToApply">Apply Now</button>
+    </div>
+</div>
+
+<style>
+    .landing-page {
+        min-height: 100vh;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding-bottom: 3rem;
+    }
+    .landing-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 2rem;
+    }
+    .nav-brand {
+        color: white;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    .btn-login {
+        background: transparent;
+        border: 2px solid white;
+        color: white;
+        padding: 0.5rem 1.5rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+    .btn-login:hover { background: rgba(255,255,255,0.1); }
+    .hero-section {
+        text-align: center;
+        color: white;
+        padding: 4rem 1rem 3rem;
+    }
+    .hero-section h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    .hero-subtitle {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        margin-bottom: 2rem;
+    }
+    .btn-apply-hero {
+        background: white;
+        color: #667eea;
+        border: none;
+        padding: 0.75rem 2rem;
+        font-size: 1.1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    .btn-apply-hero:hover { background: #f0f0f0; }
+    .calculator-card {
+        background: white;
+        max-width: 500px;
+        margin: 0 auto;
+        border-radius: 8px;
+        padding: 2rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .calculator-card h2 {
+        text-align: center;
+        margin-bottom: 1.5rem;
+        color: #333;
+    }
+    .slider-group {
+        margin-bottom: 1.5rem;
+    }
+    .slider-group label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    .slider-value {
+        color: #667eea;
+        font-weight: 700;
+    }
+    .slider-group input[type="range"] {
+        width: 100%;
+        accent-color: #667eea;
+    }
+    .select-group {
+        margin-bottom: 1.5rem;
+    }
+    .select-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    .select-group select {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    .payment-display {
+        background: #667eea;
+        color: white;
+        text-align: center;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    .payment-label {
+        display: block;
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    .payment-amount {
+        display: block;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+    .btn-apply-card {
+        width: 100%;
+        background: #667eea;
+        color: white;
+        border: none;
+        padding: 0.75rem;
+        font-size: 1.1rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+    .btn-apply-card:hover { background: #5a6fd6; }
+</style>
+
+@code {
+    private int loanAmount = 25000;
+    private int loanTerm = 48;
+    private double apr = 6.0;
+    private double[] aprOptions = { 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0 };
+
+    private double CalculateMonthlyPayment()
+    {
+        var monthlyRate = apr / 100.0 / 12.0;
+        return (loanAmount * monthlyRate * Math.Pow(1 + monthlyRate, loanTerm))
+             / (Math.Pow(1 + monthlyRate, loanTerm) - 1);
+    }
+
+    private void OnLoanAmountChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var val))
+            loanAmount = val;
+    }
+
+    private void OnLoanTermChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var val))
+            loanTerm = val;
+    }
+
+    private void NavigateToLogin() { Nav.NavigateTo("/login"); }
+    private void NavigateToApply() { Nav.NavigateTo("/signup"); }
+}

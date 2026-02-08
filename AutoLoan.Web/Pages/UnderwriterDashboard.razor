@@ -1,0 +1,232 @@
+@page "/underwriter-dashboard"
+@inject NavigationManager Nav
+
+<PageTitle>Underwriter Dashboard - Auto Loan</PageTitle>
+
+<div class="dashboard">
+    <div class="dashboard-header">
+        <h2>Underwriter Dashboard</h2>
+        <div class="header-actions">
+            <span class="welcome-text">Welcome, Underwriter</span>
+            <button class="btn-danger-sm" @onclick="HandleLogout">⎋ Logout</button>
+        </div>
+    </div>
+
+    <div class="dashboard-content">
+        <div class="stats-row">
+            <div class="stat-card stat-indigo">
+                <span class="stat-number">@stats.UnderReview</span>
+                <span class="stat-label">Under Review</span>
+            </div>
+            <div class="stat-card stat-warning">
+                <span class="stat-number">@stats.PendingDocs</span>
+                <span class="stat-label">Pending Docs</span>
+            </div>
+            <div class="stat-card stat-success">
+                <span class="stat-number">@stats.Completed</span>
+                <span class="stat-label">Completed This Month</span>
+            </div>
+        </div>
+
+        <div class="filter-card">
+            <div class="filter-row">
+                <select @bind="statusFilter" @bind:after="() => currentPage = 1">
+                    <option value="all">All Status</option>
+                    <option value="under_review">Under Review</option>
+                    <option value="pending_documents">Pending Docs</option>
+                    <option value="approved">Approved</option>
+                    <option value="rejected">Rejected</option>
+                </select>
+                <select @bind="riskFilter" @bind:after="() => currentPage = 1">
+                    <option value="all">All Risk</option>
+                    <option value="low">Low Risk</option>
+                    <option value="medium">Medium Risk</option>
+                    <option value="high">High Risk</option>
+                </select>
+                <select @bind="amountFilter" @bind:after="() => currentPage = 1">
+                    <option value="all">All Amounts</option>
+                    <option value="under25k">Under $25k</option>
+                    <option value="25k-50k">$25k - $50k</option>
+                    <option value="over50k">Over $50k</option>
+                </select>
+            </div>
+        </div>
+
+        @if (loading)
+        {
+            <div class="loading-box"><div class="spinner"></div><p>Loading applications...</p></div>
+        }
+        else
+        {
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Applicant</th>
+                            <th>Amount</th>
+                            <th>DTI</th>
+                            <th>LTV</th>
+                            <th>Risk</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!PaginatedApps.Any())
+                        {
+                            <tr><td colspan="8" class="empty-row">No applications found</td></tr>
+                        }
+                        @foreach (var app in PaginatedApps)
+                        {
+                            <tr>
+                                <td>@app.AppNumber</td>
+                                <td>@app.ApplicantName</td>
+                                <td>@app.LoanAmount.ToString("C0")</td>
+                                <td>@app.Dti%</td>
+                                <td>@app.Ltv%</td>
+                                <td><span class="risk-dot risk-@app.Risk">●</span></td>
+                                <td>@app.CreatedAt.ToShortDateString()</td>
+                                <td><button class="btn-view" @onclick="() => selectedAppId = app.Id">📊 Analyze</button></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="risk-legend">
+                <span>Risk:</span>
+                <span class="risk-dot risk-low">●</span> Low
+                <span class="risk-dot risk-medium">●</span> Medium
+                <span class="risk-dot risk-high">●</span> High
+            </div>
+
+            @if (TotalPages > 1)
+            {
+                <div class="pagination">
+                    @for (int i = 1; i <= TotalPages; i++)
+                    {
+                        var pg = i;
+                        <button class="page-btn @(currentPage == pg ? "page-active" : "")" @onclick="() => currentPage = pg">@pg</button>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<style>
+    .dashboard { min-height: 100vh; background: #f5f5f5; }
+    .dashboard-header {
+        background: white; border-bottom: 1px solid #e5e7eb; padding: 1rem 2rem;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .dashboard-header h2 { font-weight: 700; color: #333; margin: 0; }
+    .header-actions { display: flex; align-items: center; gap: 1rem; }
+    .welcome-text { color: #666; font-size: 0.9rem; }
+    .btn-danger-sm {
+        background: white; border: 1px solid #dc2626; color: #dc2626;
+        padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;
+    }
+    .dashboard-content { max-width: 1100px; margin: 0 auto; padding: 2rem 1rem; }
+    .stats-row { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; }
+    .stat-card { flex: 1; padding: 1.5rem; border-radius: 8px; text-align: center; }
+    .stat-indigo { background: #e0e7ff; }
+    .stat-warning { background: #fef3c7; }
+    .stat-success { background: #d1e7dd; }
+    .stat-number { display: block; font-size: 2rem; font-weight: 700; }
+    .stat-label { font-weight: 600; }
+    .filter-card {
+        background: white; border-radius: 8px; margin-bottom: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .filter-row { display: flex; gap: 1rem; padding: 1rem; flex-wrap: wrap; }
+    .filter-row select { padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; min-width: 140px; }
+    .loading-box { text-align: center; padding: 3rem; }
+    .spinner {
+        width: 40px; height: 40px; border: 4px solid #e5e7eb; border-top-color: #667eea;
+        border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem;
+    }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+    .table-container {
+        background: white; border-radius: 8px; overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: #f9fafb; }
+    th { padding: 0.75rem 1rem; text-align: left; font-weight: 600; font-size: 0.85rem; color: #666; }
+    td { padding: 0.75rem 1rem; border-top: 1px solid #e5e7eb; font-size: 0.9rem; }
+    tr:hover { background: #f9fafb; }
+    .empty-row { text-align: center; color: #999; padding: 2rem !important; }
+    .risk-dot { font-size: 1rem; }
+    .risk-low { color: #10b981; }
+    .risk-medium { color: #f59e0b; }
+    .risk-high { color: #ef4444; }
+    .risk-legend { display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem; font-size: 0.85rem; color: #666; }
+    .btn-view {
+        background: none; border: 1px solid #667eea; color: #667eea;
+        padding: 0.3rem 0.75rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem;
+    }
+    .pagination { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1.5rem; }
+    .page-btn {
+        width: 36px; height: 36px; border: 1px solid #ccc; border-radius: 4px;
+        background: white; cursor: pointer;
+    }
+    .page-active { background: #667eea; color: white; border-color: #667eea; }
+</style>
+
+@code {
+    private bool loading = true;
+    private string statusFilter = "all", riskFilter = "all", amountFilter = "all";
+    private int currentPage = 1, selectedAppId = 0;
+    private const int ItemsPerPage = 10;
+    private List<UwAppItem> applications = new();
+
+    private (int UnderReview, int PendingDocs, int Completed) stats =>
+        (applications.Count(a => a.Status == "under_review"),
+         applications.Count(a => a.Status == "pending_documents"),
+         applications.Count(a => a.Status == "approved" || a.Status == "rejected"));
+
+    private IEnumerable<UwAppItem> FilteredApps
+    {
+        get
+        {
+            var result = statusFilter == "all" ? applications.AsEnumerable() : applications.Where(a => a.Status == statusFilter);
+            if (riskFilter != "all") result = result.Where(a => a.Risk == riskFilter);
+            result = amountFilter switch
+            {
+                "under25k" => result.Where(a => a.LoanAmount < 25000),
+                "25k-50k" => result.Where(a => a.LoanAmount >= 25000 && a.LoanAmount <= 50000),
+                "over50k" => result.Where(a => a.LoanAmount > 50000),
+                _ => result
+            };
+            return result;
+        }
+    }
+
+    private int TotalPages => (int)Math.Ceiling((double)FilteredApps.Count() / ItemsPerPage);
+    private IEnumerable<UwAppItem> PaginatedApps => FilteredApps.Skip((currentPage - 1) * ItemsPerPage).Take(ItemsPerPage);
+
+    protected override async Task OnInitializedAsync()
+    {
+        // TODO: Call API
+        await Task.Delay(300);
+        applications = new();
+        loading = false;
+    }
+
+    private void HandleLogout() { Nav.NavigateTo("/"); }
+
+    private class UwAppItem
+    {
+        public int Id { get; set; }
+        public string AppNumber { get; set; } = "";
+        public string ApplicantName { get; set; } = "";
+        public decimal LoanAmount { get; set; }
+        public int Dti { get; set; }
+        public int Ltv { get; set; }
+        public string Risk { get; set; } = "low";
+        public string Status { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+    }
+}
